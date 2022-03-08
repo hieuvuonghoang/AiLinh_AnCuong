@@ -89,11 +89,13 @@
   </PropertyGroup>
   <PropertyGroup />
   <ItemGroup>
-    <Reference Include="ConnectSAP">
+    <Reference Include="ConnectSAP, Version=1.0.0.0, Culture=neutral, processorArchitecture=x86">
       <HintPath>..\Packages\ConnectSAP.dll</HintPath>
+      <SpecificVersion>False</SpecificVersion>
     </Reference>
-    <Reference Include="ERPConnect35">
+    <Reference Include="ERPConnect35, Version=4.1.0.19, Culture=neutral, PublicKeyToken=737201975e95eeee, processorArchitecture=MSIL">
       <HintPath>..\Packages\ERPConnect35.dll</HintPath>
+      <SpecificVersion>False</SpecificVersion>
     </Reference>
     <Reference Include="Interop.SAPbobsCOM">
       <HintPath>..\Packages\SAPB1\Interop.SAPbobsCOM.dll</HintPath>

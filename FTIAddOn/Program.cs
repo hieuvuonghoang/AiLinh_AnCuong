@@ -157,9 +157,14 @@ namespace FTIAddOn
                 switch (pVal.MenuUID)
                 {
                     case MENU_TKPGH_ID:
-                        var tKPGH = new TimKiemPhieuGiaoHang(SBO_Application, this, Guid.NewGuid().ToString().Substring(0, 8));
-                        tKPGH.OpenForm();
-                        tKPGH = null;
+
+                        var kQTKPGH = new KetQuaTimKiemPhieuGiaoHang(SBO_Application, this, Guid.NewGuid().ToString().Substring(0, 8));
+                        kQTKPGH.OpenForm();
+                        kQTKPGH = null;
+
+                        //var tKPGH = new TimKiemPhieuGiaoHang(SBO_Application, this, Guid.NewGuid().ToString().Substring(0, 8));
+                        //tKPGH.OpenForm();
+                        //tKPGH = null;
                         break;
                     case MENU_TEST_ID:
                         var tFunction = new TestFunction(SBO_Application, this, Guid.NewGuid().ToString().Substring(0, 8));
