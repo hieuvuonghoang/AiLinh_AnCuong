@@ -224,7 +224,7 @@ namespace FTIAddOn
         private void CreateMenu()
         {
             FTIGlobal.PublicFunctions.CreateMenu(MENU_TKPGH_ID, "Tìm kiếm phiếu giao hàng", BoMenuType.mt_STRING, "2048", SBO_Application);
-            FTIGlobal.PublicFunctions.CreateMenu(MENU_TEST_ID, "Test Function", BoMenuType.mt_STRING, "2048", SBO_Application);
+            //FTIGlobal.PublicFunctions.CreateMenu(MENU_TEST_ID, "Test Function", BoMenuType.mt_STRING, "2048", SBO_Application);
         }
         
     }
