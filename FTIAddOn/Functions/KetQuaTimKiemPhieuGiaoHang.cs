@@ -625,7 +625,7 @@ namespace AddOn_AC_AL.Functions
             try
             {
                 var oCompany = (SAPbobsCOM.Company)SBO_Application.Company.GetDICompany();
-                var sQL = "SELECT UgpEntry, UgpCode FROM OUGP";
+                var sQL = "SELECT \"UgpEntry\", \"UgpCode\" FROM \"OUGP\"";
                 var oRecordSet = (SAPbobsCOM.Recordset)oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
                 oRecordSet.DoQuery(sQL);
                 var hTOUGP = new Hashtable();
@@ -639,18 +639,18 @@ namespace AddOn_AC_AL.Functions
                     }
                     oRecordSet.MoveNext();
                 }
-                var oDocuments = (SAPbobsCOM.Documents)oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oPurchaseOrders);
-                var oLines = oDocuments.Lines;
                 var docEntrys = new List<IDValue>();
                 foreach (var gR in rowDatas.GroupBy(it => it.VBELN))
                 {
                     try
                     {
                         var first = gR.First();
+                        var oDocuments = (SAPbobsCOM.Documents)oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oPurchaseOrders);
                         oDocuments.CardCode = first.SUPPLIER;
                         oDocuments.TaxDate = DateTime.ParseExact(first.BLDAT, "yyyyMMdd", null);
                         oDocuments.DocDueDate = DateTime.ParseExact(first.LFDAT, "yyyyMMdd", null);
                         oDocuments.DocDate = DateTime.ParseExact(first.WADAT_IST, "yyyyMMdd", null);
+                        var oLines = oDocuments.Lines;
                         var lineNum = 0;
                         foreach (var row in gR)
                         {
@@ -689,15 +689,18 @@ namespace AddOn_AC_AL.Functions
                     } catch(Exception ex)
                     {
                         SBO_Application.SetStatusBarMessage(ex.Message, BoMessageTime.bmt_Short, true);
-                        System.Runtime.InteropServices.Marshal.ReleaseComObject(oLines);
-                        System.Runtime.InteropServices.Marshal.ReleaseComObject(oDocuments);
                     }
                 }
-                System.Runtime.InteropServices.Marshal.FinalReleaseComObject(oLines);
-                System.Runtime.InteropServices.Marshal.FinalReleaseComObject(oDocuments);
-                var form = new DanhSachPOTaoThanhCong(this.SBO_Application, this.program, docEntrys, Guid.NewGuid().ToString().Substring(0, 8));
-                form.OpenForm();
-                form = null;
+                if(docEntrys.Count != 0)
+                {
+                    var form = new DanhSachPOTaoThanhCong(this.SBO_Application, this.program, docEntrys, Guid.NewGuid().ToString().Substring(0, 8));
+                    form.OpenForm();
+                    form = null;
+                }
+                else
+                {
+                    SBO_Application.SetStatusBarMessage("Không có PO nào được tạo thành công!", BoMessageTime.bmt_Short, true);
+                }
             }
             catch (Exception ex)
             {
