@@ -115,10 +115,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Functions\KetQuaTimKiemPhieuGiaoHang.cs" />
-    <Compile Include="Functions\TestFunction.cs" />
-    <Compile Include="Functions\TimKiemPhieuGiaoHang.cs" />
     <Compile Include="Models\DataTable.cs" />
     <Compile Include="Models\IDValue.cs" />
+    <Compile Include="Models\RowData.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

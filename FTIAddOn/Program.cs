@@ -112,11 +112,14 @@ namespace FTIAddOn
             //oFilter = oFilters.Add(SAPbouiCOM.BoEventTypes.et_MENU_CLICK);
             //oFilter = oFilters.Add(SAPbouiCOM.BoEventTypes.et_CLICK);
             //oFilter = oFilters.Add(SAPbouiCOM.BoEventTypes.et_KEY_DOWN);
-            oFilter = oFilters.Add(SAPbouiCOM.BoEventTypes.et_ALL_EVENTS);
+            //oFilter = oFilters.Add(SAPbouiCOM.BoEventTypes.et_ALL_EVENTS);
             //oFilter = oFilters.Add(SAPbouiCOM.BoEventTypes.et_FORM_KEY_DOWN);
-            oFilter.AddEx(FORM_TYPE_TKPGH);
+            //oFilter.AddEx(FORM_TYPE_TKPGH);
+            oFilter = oFilters.Add(SAPbouiCOM.BoEventTypes.et_CLICK);
+            oFilter = oFilters.Add(SAPbouiCOM.BoEventTypes.et_CHOOSE_FROM_LIST);
+            oFilter = oFilters.Add(SAPbouiCOM.BoEventTypes.et_MENU_CLICK);
             oFilter.AddEx(FORM_TYPE_KQTKPGH);
-            oFilter.AddEx(FORM_TYPE_TFUNC);
+            //oFilter.AddEx(FORM_TYPE_TFUNC);
             // assign the form type on which the event would be processed
             //oFilter.AddEx("139"); // Orders Form
             SBO_Application.SetFilter(oFilters);
@@ -167,9 +170,9 @@ namespace FTIAddOn
                         //tKPGH = null;
                         break;
                     case MENU_TEST_ID:
-                        var tFunction = new TestFunction(SBO_Application, this, Guid.NewGuid().ToString().Substring(0, 8));
-                        tFunction.OpenForm();
-                        tFunction = null;
+                        //var tFunction = new TestFunction(SBO_Application, this, Guid.NewGuid().ToString().Substring(0, 8));
+                        //tFunction.OpenForm();
+                        //tFunction = null;
                         break;
                 }
             }
@@ -183,9 +186,9 @@ namespace FTIAddOn
                 switch (pVal.FormTypeEx)
                 {
                     case FORM_TYPE_TKPGH:
-                        var tKPGH = new TimKiemPhieuGiaoHang(SBO_Application, this, pVal.FormUID);
-                        tKPGH.SBO_Application_ItemEvent_AfterAction(FormUID, ref pVal, out BubbleEvent);
-                        tKPGH = null;
+                        //var tKPGH = new TimKiemPhieuGiaoHang(SBO_Application, this, pVal.FormUID);
+                        //tKPGH.SBO_Application_ItemEvent_AfterAction(FormUID, ref pVal, out BubbleEvent);
+                        //tKPGH = null;
                         break;
                     case FORM_TYPE_KQTKPGH:
                         var kQTKPGH = new KetQuaTimKiemPhieuGiaoHang(SBO_Application, this, pVal.FormUID);
@@ -193,9 +196,9 @@ namespace FTIAddOn
                         kQTKPGH = null;
                         break;
                     case FORM_TYPE_TFUNC:
-                        var tFUNC = new TestFunction(SBO_Application, this, pVal.FormUID);
-                        tFUNC.SBO_Application_ItemEvent_AfterAction(FormUID, ref pVal, out BubbleEvent);
-                        tFUNC = null;
+                        //var tFUNC = new TestFunction(SBO_Application, this, pVal.FormUID);
+                        //tFUNC.SBO_Application_ItemEvent_AfterAction(FormUID, ref pVal, out BubbleEvent);
+                        //tFUNC = null;
                         break;
                 }
             } else
