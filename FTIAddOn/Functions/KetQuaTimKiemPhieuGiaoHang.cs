@@ -626,6 +626,21 @@ namespace AddOn_AC_AL.Functions
             try
             {
                 var oCompany = (SAPbobsCOM.Company)SBO_Application.Company.GetDICompany();
+                var sQL = "SELECT UgpEntry, UgpCode FROM OUGP";
+                var oRecordSet = (SAPbobsCOM.Recordset)oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+                oRecordSet.DoQuery(sQL);
+                var hTOUGP = new Hashtable();
+                while(!oRecordSet.EoF)
+                {
+                    var ugpEntry = oRecordSet.Fields.Item(0).Value;
+                    var ugpCode = oRecordSet.Fields.Item(1).Value;
+                    if(!hTOUGP.ContainsKey(ugpCode))
+                    {
+                        hTOUGP.Add(ugpCode, ugpEntry);
+                    }
+                    oRecordSet.MoveNext();
+                }
+
                 var oDocuments = (SAPbobsCOM.Documents)oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oPurchaseOrders);
                 foreach (var gR in rowDatas.GroupBy(it => it.VBELN))
                 {
@@ -641,8 +656,13 @@ namespace AddOn_AC_AL.Functions
                         oLines.Add();
                         oLines.SetCurrentLine(lineNum);
                         oLines.ItemCode = row.MATNR;
-                        //oLines.UoMEntry = row.VRKME;
+                        if(hTOUGP.ContainsKey(row.VRKME))
+                        {
+                            oLines.UoMEntry = (int)hTOUGP[row.VRKME];
+                        }
                         oLines.Quantity = double.Parse(row.LFIMG);
+                        oLines.UnitPrice = double.Parse(row.UNITPRICE);
+                        oLines.LineTotal = oLines.Quantity * oLines.UnitPrice;
                         oLines.WarehouseCode = row.WHSE;
                         lineNum++;
                     }
