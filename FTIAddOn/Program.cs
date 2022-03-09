@@ -51,6 +51,9 @@ namespace FTIAddOn
         private const string FORM_TYPE_KQTKPGH = "UF_KQTKPGH";
         public string formTypeKQTKPGH => FORM_TYPE_KQTKPGH;
 
+        private const string FORM_TYPE_DSPOTTC = "UF_DSPOTTC";
+        public string formTypeDSPOTTC => FORM_TYPE_DSPOTTC;
+
         /// <summary>
         /// FORM TYPE: Test function
         /// </summary>

@@ -82,7 +82,6 @@ namespace AddOn_AC_AL.Functions
                 oXmlDoc.Load("Forms\\" + FILE_NAME);
                 var nodeForm = oXmlDoc.ChildNodes.Item(1).ChildNodes.Item(0).ChildNodes.Item(0).ChildNodes.Item(0);
                 nodeForm.Attributes["uid"].Value = formID;
-                //nodeForm.Attributes["title"].Value += ": " + Parameters;
                 nodeForm.Attributes["FormType"].Value = formType;
                 var sXML = oXmlDoc.InnerXml.ToString();
                 SBO_Application.LoadBatchActions(ref sXML);
@@ -106,7 +105,7 @@ namespace AddOn_AC_AL.Functions
             }
             catch (Exception ex)
             {
-                SBO_Application.SetStatusBarMessage(ex.Message, BoMessageTime.bmt_Medium, true);
+                SBO_Application.SetStatusBarMessage(ex.Message, BoMessageTime.bmt_Short, true);
             }
         }
 
@@ -124,7 +123,7 @@ namespace AddOn_AC_AL.Functions
             }
             catch (Exception ex)
             {
-                SBO_Application.SetStatusBarMessage(ex.Message, BoMessageTime.bmt_Medium, true);
+                SBO_Application.SetStatusBarMessage(ex.Message, BoMessageTime.bmt_Short, true);
             }
         }
 
@@ -154,7 +153,7 @@ namespace AddOn_AC_AL.Functions
             }
             catch (Exception ex)
             {
-                SBO_Application.SetStatusBarMessage(ex.Message, BoMessageTime.bmt_Medium, true);
+                SBO_Application.SetStatusBarMessage(ex.Message, BoMessageTime.bmt_Short, true);
             }
         }
 
@@ -175,7 +174,7 @@ namespace AddOn_AC_AL.Functions
             }
             catch (Exception ex)
             {
-                SBO_Application.SetStatusBarMessage(ex.Message, BoMessageTime.bmt_Medium, true);
+                SBO_Application.SetStatusBarMessage(ex.Message, BoMessageTime.bmt_Short, true);
             }
         }
 
@@ -222,7 +221,7 @@ namespace AddOn_AC_AL.Functions
             }
             catch (Exception ex)
             {
-                SBO_Application.SetStatusBarMessage(ex.Message, BoMessageTime.bmt_Medium, true);
+                SBO_Application.SetStatusBarMessage(ex.Message, BoMessageTime.bmt_Short, true);
             }
         }
 
@@ -409,7 +408,7 @@ namespace AddOn_AC_AL.Functions
             }
             catch (Exception ex)
             {
-                SBO_Application.SetStatusBarMessage(ex.Message, BoMessageTime.bmt_Medium, true);
+                SBO_Application.SetStatusBarMessage(ex.Message, BoMessageTime.bmt_Short, true);
             }
         }
 
@@ -436,7 +435,7 @@ namespace AddOn_AC_AL.Functions
                 program.oProgBar = null;
                 if (exValue.ParamValue.Equals(0))
                 {
-                    SBO_Application.SetStatusBarMessage("Fail OD không hợp lệ!", BoMessageTime.bmt_Medium, true);
+                    SBO_Application.SetStatusBarMessage("Fail OD không hợp lệ!", BoMessageTime.bmt_Short, true);
                     return;
                 }
                 this.oD_Ts = oD_Ts;
@@ -448,7 +447,7 @@ namespace AddOn_AC_AL.Functions
                 System.Runtime.InteropServices.Marshal.ReleaseComObject(program.oProgBar);
                 program.oProgBar = null;
                 con.Close();
-                SBO_Application.SetStatusBarMessage(ex.Message, BoMessageTime.bmt_Medium, true);
+                SBO_Application.SetStatusBarMessage(ex.Message, BoMessageTime.bmt_Short, true);
             }
         }
 
@@ -582,7 +581,7 @@ namespace AddOn_AC_AL.Functions
                 System.Runtime.InteropServices.Marshal.ReleaseComObject(program.oProgBar);
                 program.oProgBar = null;
                 oForm.Freeze(false);
-                SBO_Application.SetStatusBarMessage(ex.Message, BoMessageTime.bmt_Medium, true);
+                SBO_Application.SetStatusBarMessage(ex.Message, BoMessageTime.bmt_Short, true);
             }
         }
 
@@ -617,7 +616,7 @@ namespace AddOn_AC_AL.Functions
             }
             catch (Exception ex)
             {
-                SBO_Application.SetStatusBarMessage(ex.Message, BoMessageTime.bmt_Medium, true);
+                SBO_Application.SetStatusBarMessage(ex.Message, BoMessageTime.bmt_Short, true);
             }
         }
 
@@ -640,40 +639,69 @@ namespace AddOn_AC_AL.Functions
                     }
                     oRecordSet.MoveNext();
                 }
-
                 var oDocuments = (SAPbobsCOM.Documents)oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oPurchaseOrders);
+                var oLines = oDocuments.Lines;
+                var docEntrys = new List<IDValue>();
                 foreach (var gR in rowDatas.GroupBy(it => it.VBELN))
                 {
-                    var first = gR.First();
-                    oDocuments.CardCode = first.SUPPLIER;
-                    oDocuments.TaxDate = DateTime.ParseExact(first.BLDAT, "yyyyMMdd", null);
-                    oDocuments.DocDueDate = DateTime.ParseExact(first.LFDAT, "yyyyMMdd", null);
-                    oDocuments.DocDate = DateTime.ParseExact(first.WADAT_IST, "yyyyMMdd", null);
-                    var oLines = oDocuments.Lines;
-                    var lineNum = 0;
-                    foreach (var row in gR)
+                    try
                     {
-                        oLines.Add();
-                        oLines.SetCurrentLine(lineNum);
-                        oLines.ItemCode = row.MATNR;
-                        if(hTOUGP.ContainsKey(row.VRKME))
+                        var first = gR.First();
+                        oDocuments.CardCode = first.SUPPLIER;
+                        oDocuments.TaxDate = DateTime.ParseExact(first.BLDAT, "yyyyMMdd", null);
+                        oDocuments.DocDueDate = DateTime.ParseExact(first.LFDAT, "yyyyMMdd", null);
+                        oDocuments.DocDate = DateTime.ParseExact(first.WADAT_IST, "yyyyMMdd", null);
+                        var lineNum = 0;
+                        foreach (var row in gR)
                         {
-                            oLines.UoMEntry = (int)hTOUGP[row.VRKME];
+                            oLines.Add();
+                            oLines.SetCurrentLine(lineNum);
+                            oLines.ItemCode = row.MATNR;
+                            if (hTOUGP.ContainsKey(row.VRKME))
+                            {
+                                oLines.UoMEntry = (int)hTOUGP[row.VRKME];
+                            }
+                            oLines.Quantity = double.Parse(row.LFIMG);
+                            oLines.UnitPrice = double.Parse(row.UNITPRICE);
+                            oLines.LineTotal = oLines.Quantity * oLines.UnitPrice;
+                            oLines.WarehouseCode = row.WHSE;
+                            lineNum++;
                         }
-                        oLines.Quantity = double.Parse(row.LFIMG);
-                        oLines.UnitPrice = double.Parse(row.UNITPRICE);
-                        oLines.LineTotal = oLines.Quantity * oLines.UnitPrice;
-                        oLines.WarehouseCode = row.WHSE;
-                        lineNum++;
+                        var ret = oDocuments.Add();
+                        if(ret == 0)
+                        {
+                            var docEntry = "";
+                            oCompany.GetNewObjectCode(out docEntry);
+                            docEntrys.Add(new IDValue()
+                            {
+                                IDS = docEntry,
+                                Value = first.VBELN
+                            });
+                        } else
+                        {
+                            var errCode = 0;
+                            var errMes = "";
+                            oCompany.GetLastError(out errCode, out errMes);
+                            throw new Exception($"Lỗi xảy ra khi tạo PO: {first.VBELN} -> {errCode}-{errMes}");
+                        }
+                        System.Runtime.InteropServices.Marshal.ReleaseComObject(oLines);
+                        System.Runtime.InteropServices.Marshal.ReleaseComObject(oDocuments);
+                    } catch(Exception ex)
+                    {
+                        SBO_Application.SetStatusBarMessage(ex.Message, BoMessageTime.bmt_Short, true);
+                        System.Runtime.InteropServices.Marshal.ReleaseComObject(oLines);
+                        System.Runtime.InteropServices.Marshal.ReleaseComObject(oDocuments);
                     }
-                    var ret = oDocuments.Add();
-                    System.Runtime.InteropServices.Marshal.ReleaseComObject(oLines);
-                    System.Runtime.InteropServices.Marshal.ReleaseComObject(oDocuments);
                 }
+                System.Runtime.InteropServices.Marshal.FinalReleaseComObject(oLines);
+                System.Runtime.InteropServices.Marshal.FinalReleaseComObject(oDocuments);
+                var form = new DanhSachPOTaoThanhCong(this.SBO_Application, this.program, docEntrys, Guid.NewGuid().ToString().Substring(0, 8));
+                form.OpenForm();
+                form = null;
             }
             catch (Exception ex)
             {
-                SBO_Application.SetStatusBarMessage(ex.Message, BoMessageTime.bmt_Medium, true);
+                SBO_Application.SetStatusBarMessage(ex.Message, BoMessageTime.bmt_Short, true);
             }
         }
     }

@@ -114,6 +114,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Functions\DanhSachPOTaoThanhCong.cs" />
     <Compile Include="Functions\KetQuaTimKiemPhieuGiaoHang.cs" />
     <Compile Include="Models\DataTable.cs" />
     <Compile Include="Models\IDValue.cs" />
@@ -151,6 +152,9 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Forms\DanhSachPOTaoThanhCong.srf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="Forms\KetQuaTimKiemPhieuGiaoHang.srf">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
