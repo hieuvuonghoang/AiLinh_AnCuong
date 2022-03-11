@@ -645,7 +645,8 @@ namespace AddOn_AC_AL.Functions
                     try
                     {
                         var first = gR.First();
-                        var oDocuments = (SAPbobsCOM.Documents)oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oPurchaseOrders);
+                        var oDocuments = (SAPbobsCOM.Documents)oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oDrafts);
+                        oDocuments.DocObjectCode = SAPbobsCOM.BoObjectTypes.oPurchaseOrders;
                         oDocuments.CardCode = first.SUPPLIER;
                         oDocuments.TaxDate = DateTime.ParseExact(first.BLDAT, "yyyyMMdd", null);
                         oDocuments.DocDueDate = DateTime.ParseExact(first.LFDAT, "yyyyMMdd", null);
