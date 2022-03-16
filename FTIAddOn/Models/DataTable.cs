@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Serialization;
 
-namespace AddOn_AC_AL.Models
+namespace AddOn_AC_AL.Models.DataTable
 {
     // using System.Xml.Serialization;
     // XmlSerializer serializer = new XmlSerializer(typeof(DataTable));

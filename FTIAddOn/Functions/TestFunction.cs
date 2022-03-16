@@ -5,6 +5,10 @@ using System.Text;
 using System.Threading.Tasks;
 using FTIAddOn;
 using SAPbouiCOM;
+using System.IO;
+using System.Xml.Serialization;
+using AddOn_AC_AL.Models.OUGP;
+using System.Collections;
 
 namespace AddOn_AC_AL.Functions
 {
@@ -77,7 +81,23 @@ namespace AddOn_AC_AL.Functions
                 switch (pVal.ItemUID)
                 {
                     case BTN_TEST_ID:
-                        CreateSO();
+                        var sQL = "SELECT UgpEntry, UgpCode FROM OUGP";
+                        var oRecordset = this.program.Recordset;
+                        oRecordset.DoQuery(sQL);
+                        var xml = oRecordset.GetAsXML();
+                        var serializer = new XmlSerializer(typeof(BOM));
+                        var hT = new Hashtable();
+                        using (var reader = new StringReader(xml))
+                        {
+                            var bOM = (BOM)serializer.Deserialize(reader);
+                            foreach(var row in bOM.BO.OUGP.Row)
+                            {
+                                if(!hT.ContainsKey(row.UgpEntry))
+                                {
+                                    hT.Add(row.UgpEntry, row);
+                                }
+                            }
+                        }
                         break;
                 }
             }

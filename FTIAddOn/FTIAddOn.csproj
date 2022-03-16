@@ -76,7 +76,7 @@
     <OutputPath>bin\x64\Release\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <Optimize>true</Optimize>
-    <DebugType>pdbonly</DebugType>
+    <DebugType>none</DebugType>
     <PlatformTarget>x64</PlatformTarget>
     <CodeAnalysisLogFile>bin\Release\Allocation.exe.CodeAnalysisLog.xml</CodeAnalysisLogFile>
     <CodeAnalysisUseTypeNameInSuppression>true</CodeAnalysisUseTypeNameInSuppression>
@@ -86,12 +86,13 @@
     <CodeAnalysisRuleSetDirectories>;C:\Program Files (x86)\Microsoft Visual Studio 10.0\Team Tools\Static Analysis Tools\\Rule Sets</CodeAnalysisRuleSetDirectories>
     <CodeAnalysisRuleDirectories>;C:\Program Files (x86)\Microsoft Visual Studio 10.0\Team Tools\Static Analysis Tools\FxCop\\Rules</CodeAnalysisRuleDirectories>
     <Prefer32Bit>false</Prefer32Bit>
+    <UseVSHostingProcess>false</UseVSHostingProcess>
   </PropertyGroup>
   <PropertyGroup />
   <ItemGroup>
     <Reference Include="ConnectSAP, Version=1.0.0.0, Culture=neutral, processorArchitecture=x86">
-      <HintPath>..\Packages\ConnectSAP.dll</HintPath>
       <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Packages\ConnectSAP.dll</HintPath>
     </Reference>
     <Reference Include="ERPConnect35, Version=4.1.0.19, Culture=neutral, PublicKeyToken=737201975e95eeee, processorArchitecture=MSIL">
       <HintPath>..\Packages\ERPConnect35.dll</HintPath>
@@ -116,6 +117,8 @@
   <ItemGroup>
     <Compile Include="Functions\DanhSachPOTaoThanhCong.cs" />
     <Compile Include="Functions\KetQuaTimKiemPhieuGiaoHang.cs" />
+    <Compile Include="Functions\TestFunction.cs" />
+    <Compile Include="Models\RecordsetOUGP.cs" />
     <Compile Include="Models\DataTable.cs" />
     <Compile Include="Models\IDValue.cs" />
     <Compile Include="Models\RowData.cs" />

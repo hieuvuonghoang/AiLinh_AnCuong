@@ -28,6 +28,9 @@ namespace FTIAddOn
 
         private SAPbouiCOM.Application SBO_Application;
         private SAPbobsCOM.Company oCompany;
+        private SAPbobsCOM.Recordset oRecordset;
+
+        public SAPbobsCOM.Recordset Recordset => oRecordset;
 
         /// <summary>
         /// Menu Test ID
@@ -98,6 +101,8 @@ namespace FTIAddOn
 
             oCompany = SBO_Application.Company.GetDICompany();
 
+            oRecordset = oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+
             SBO_Application.SetStatusBarMessage("Connected!", SAPbouiCOM.BoMessageTime.bmt_Short, false);
         }
 
@@ -121,8 +126,9 @@ namespace FTIAddOn
             oFilter = oFilters.Add(SAPbouiCOM.BoEventTypes.et_CLICK);
             oFilter = oFilters.Add(SAPbouiCOM.BoEventTypes.et_CHOOSE_FROM_LIST);
             oFilter = oFilters.Add(SAPbouiCOM.BoEventTypes.et_MENU_CLICK);
+            oFilter = oFilters.Add(SAPbouiCOM.BoEventTypes.et_COMBO_SELECT);
             oFilter.AddEx(FORM_TYPE_KQTKPGH);
-            //oFilter.AddEx(FORM_TYPE_TFUNC);
+            oFilter.AddEx(FORM_TYPE_TFUNC);
             // assign the form type on which the event would be processed
             //oFilter.AddEx("139"); // Orders Form
             SBO_Application.SetFilter(oFilters);
@@ -163,19 +169,14 @@ namespace FTIAddOn
                 switch (pVal.MenuUID)
                 {
                     case MENU_TKPGH_ID:
-
                         var kQTKPGH = new KetQuaTimKiemPhieuGiaoHang(SBO_Application, this, Guid.NewGuid().ToString().Substring(0, 8));
                         kQTKPGH.OpenForm();
                         kQTKPGH = null;
-
-                        //var tKPGH = new TimKiemPhieuGiaoHang(SBO_Application, this, Guid.NewGuid().ToString().Substring(0, 8));
-                        //tKPGH.OpenForm();
-                        //tKPGH = null;
                         break;
                     case MENU_TEST_ID:
-                        //var tFunction = new TestFunction(SBO_Application, this, Guid.NewGuid().ToString().Substring(0, 8));
-                        //tFunction.OpenForm();
-                        //tFunction = null;
+                        var tFunction = new TestFunction(SBO_Application, this, Guid.NewGuid().ToString().Substring(0, 8));
+                        tFunction.OpenForm();
+                        tFunction = null;
                         break;
                 }
             }
@@ -199,9 +200,9 @@ namespace FTIAddOn
                         kQTKPGH = null;
                         break;
                     case FORM_TYPE_TFUNC:
-                        //var tFUNC = new TestFunction(SBO_Application, this, pVal.FormUID);
-                        //tFUNC.SBO_Application_ItemEvent_AfterAction(FormUID, ref pVal, out BubbleEvent);
-                        //tFUNC = null;
+                        var tFUNC = new TestFunction(SBO_Application, this, pVal.FormUID);
+                        tFUNC.SBO_Application_ItemEvent_AfterAction(FormUID, ref pVal, out BubbleEvent);
+                        tFUNC = null;
                         break;
                 }
             } else
@@ -229,8 +230,8 @@ namespace FTIAddOn
 
         private void CreateMenu()
         {
-            FTIGlobal.PublicFunctions.CreateMenu(MENU_TKPGH_ID, "Tìm kiếm phiếu giao hàng", BoMenuType.mt_STRING, "2048", SBO_Application);
-            //FTIGlobal.PublicFunctions.CreateMenu(MENU_TEST_ID, "Test Function", BoMenuType.mt_STRING, "2048", SBO_Application);
+            FTIGlobal.PublicFunctions.CreateMenu(MENU_TKPGH_ID, "Tìm kiếm phiếu giao hàng - An Cường", BoMenuType.mt_STRING, "2304", SBO_Application);
+            FTIGlobal.PublicFunctions.CreateMenu(MENU_TEST_ID, "Test Function", BoMenuType.mt_STRING, "2304", SBO_Application);
         }
         
     }

@@ -31,9 +31,11 @@ namespace AddOn_AC_AL.Functions
         private const string BTN_SELECT_ALL_ID = "Item_3";
         private const string BTN_TAO_PO_ID = "Item_5";
         private const string BTN_TIM_KIEM_ID = "Item_13";
+        private const string BTN_CB_LOC_ID = "Item_15";
         private const string UD_SO_PGH_ID = "UD_0";
         private const string UD_TU_NGAY_ID = "UD_1";
         private const string UD_DEN_NGAY_ID = "UD_2";
+        private const string UD_LOC_VALUE_ID = "UD_3";
 
         private const string KEY_HT_CACHE_DT = "HTCACHEDT";
         private const string KEY_HT_CACHE_DT2 = "HTCACHED2";
@@ -57,6 +59,10 @@ namespace AddOn_AC_AL.Functions
         private SAPbouiCOM.UserDataSource uDSoPGH => oForm.DataSources.UserDataSources.Item(UD_SO_PGH_ID);
         private SAPbouiCOM.UserDataSource uDTuNgay => oForm.DataSources.UserDataSources.Item(UD_TU_NGAY_ID);
         private SAPbouiCOM.UserDataSource uDDenNgay => oForm.DataSources.UserDataSources.Item(UD_DEN_NGAY_ID);
+        private SAPbouiCOM.UserDataSource uDLocDuLieu => oForm.DataSources.UserDataSources.Item(UD_LOC_VALUE_ID);
+        private SAPbouiCOM.Button oBtnCollapse => oForm.Items.Item(BTN_COLLAPSE_ID).Specific;
+        private SAPbouiCOM.Button oBtnExpand => oForm.Items.Item(BTN_EXPAND_ID).Specific;
+        private SAPbouiCOM.ButtonCombo oBtnComboLoc => oForm.Items.Item(BTN_CB_LOC_ID).Specific;
 
         public KetQuaTimKiemPhieuGiaoHang(SAPbouiCOM.Application SBO_Application, Program program, RFCTable oD_Ts, string parameters, string formID)
         {
@@ -94,12 +100,23 @@ namespace AddOn_AC_AL.Functions
                 oForm.Items.Item("Item_4").TextStyle = 1;
                 oForm.Items.Item("Item_6").TextStyle = 1;
 
-                oGrid.DataTable = oDataTable0;
-                oGrid.CollapseLevel = 1;
-                oGrid.AutoResizeColumns();
+                oBtnComboLoc.Item.DisplayDesc = true;
+                oBtnComboLoc.ValidValues.Add("1", "Tất cả");
+                oBtnComboLoc.ValidValues.Add("2", "OD chưa có trong hệ thống");
+                oBtnComboLoc.ValidValues.Add("3", "OD đã tồn tại trong hệ thống");
+                oBtnComboLoc.Select(0, BoSearchKey.psk_Index);
+                
+
+                //oGrid.DataTable = oDataTable0;
+                //oGrid.CollapseLevel = 1;
+                //oGrid.AutoResizeColumns();
                 oGrid.SelectionMode = BoMatrixSelect.ms_Auto;
 
-                SetTitleGrid();
+                //SetTitleGrid();
+
+                oBtnCollapse.Item.Enabled = false;
+                oBtnExpand.Item.Enabled = false;
+                //oBtnComboLoc.Item.Enabled = false;
 
                 oForm.Visible = true;
             }
@@ -170,6 +187,9 @@ namespace AddOn_AC_AL.Functions
                     case BoEventTypes.et_CHOOSE_FROM_LIST:
                         AfterAction_CFL(formUID, ref pVal, out bubbleEvent);
                         break;
+                    case BoEventTypes.et_COMBO_SELECT:
+                        var a = uDLocDuLieu.Value;
+                        break;
                 }
             }
             catch (Exception ex)
@@ -205,7 +225,7 @@ namespace AddOn_AC_AL.Functions
                                 if (dTRI != -1)
                                 {
                                     oDataTable0.SetValue("WHSE", dTRI, whse);
-                                    var row = (Row)hTDT[dTRI];
+                                    var row = (Models.DataTable.Row)hTDT[dTRI];
                                     foreach (var cell in row.Cells.Cell)
                                     {
                                         if (cell.ColumnUid == "WHSE")
@@ -247,7 +267,6 @@ namespace AddOn_AC_AL.Functions
                         var tuNgay = DateTime.ParseExact(uDTuNgay.Value, "dd.MM.yy", null);
                         var denNgay = DateTime.ParseExact(uDDenNgay.Value, "dd.MM.yy", null);
                         Call_YAC_FM_FTI_GET_OD(soOD, tuNgay, denNgay);
-
                         break;
                     case BTN_COLLAPSE_ID:
                         oGrid.Rows.CollapseAll();
@@ -290,7 +309,7 @@ namespace AddOn_AC_AL.Functions
                         for (var i = 0; i < oDataTable1.Rows.Count; i++)
                         {
                             var indexGrid = (int)oDataTable1.GetValue(0, i);
-                            var rows = (List<Models.Row>)hTDT[indexGrid];
+                            var rows = (List<Models.DataTable.Row>)hTDT[indexGrid];
                             foreach (var row in rows)
                             {
                                 var rowData = new RowData();
@@ -451,66 +470,79 @@ namespace AddOn_AC_AL.Functions
             }
         }
 
-        private void DisplayData()
+        /// <summary>
+        /// Từ chuỗi XML cấu trúc DataTable của SAP tạo đối tượng DataTable trong .NET
+        /// </summary>
+        /// <returns></returns>
+        private Models.DataTable.DataTable GenNetDataTableFormXML()
         {
-            program.oProgBar = SBO_Application.StatusBar.CreateProgressBar("Đang xử lý dữ liệu...", oD_Ts.RowCount, true);
-            oForm.Freeze(true);
             try
             {
                 var xml = oDataTable0.SerializeAsXML(BoDataTableXmlSelect.dxs_All);
-                var serializer = new XmlSerializer(typeof(Models.DataTable));
-                Models.DataTable dataTable = null;
+                var serializer = new XmlSerializer(typeof(Models.DataTable.DataTable));
+                Models.DataTable.DataTable dataTable = null;
                 using (var sr = new StringReader(xml))
                 {
-                    dataTable = (Models.DataTable)serializer.Deserialize(sr);
+                    dataTable = (Models.DataTable.DataTable)serializer.Deserialize(sr);
                 }
+                dataTable.Rows = new Models.DataTable.Rows();
+                dataTable.Rows.Row = new List<Models.DataTable.Row>();
+                return dataTable;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception(ex.Message);
+            }
+        }
 
-                dataTable.Rows = new Models.Rows();
-                dataTable.Rows.Row = new List<Models.Row>();
-
-                //var a = oD_Ts.ToADOTable();
-                //var ms1 = new MemoryStream();
-
-
-                //a.WriteXmlSchema(ms1);
-                //ms1.Position = 0;
-
-                //var r2 = new StreamReader(ms1);
-                //var res2 = r2.ReadToEnd();
-
+        /// <summary>
+        /// Map dữ liệu trả về từ RFC (System A1) sang dữ liệu DataTable trong .NET
+        /// Chuẩn bị dữ liệu HashTable để lưu vào memory
+        /// </summary>
+        /// <returns>
+        /// + Item1 Models.DataTable.DataTable
+        /// + Item2 (Key: VBELN, Value: Models.DataTable.Row)
+        /// + Item3 (Key: IndexOfDataTable SAP, Value: Models.DataTable.Row)
+        /// + Item4 List<string> thứ tự VBELN RFC trả về
+        /// </returns>
+        private Tuple<Models.DataTable.DataTable, Hashtable, Hashtable, List<string>> MapDataRFCToDataTable()
+        {
+            program.oProgBar = SBO_Application.StatusBar.CreateProgressBar("Đang xử lý dữ liệu...", oD_Ts.RowCount, true);
+            try
+            {
+                var dataTable = GenNetDataTableFormXML();
                 var hTODTs = new Hashtable();
                 var hTDTs = new Hashtable();
-                var sTTValues = new List<IDValue>();
-                var sTT = 1;
+                var vBELNs = new List<string>();
                 for (var i = 0; i < oD_Ts.RowCount; i++)
                 {
                     var keyHT = (string)oD_Ts[i, "VBELN"];
-                    var row = new Models.Row();
-                    row.Cells = new Models.Cells();
-                    row.Cells.Cell = new List<Models.Cell>();
+                    var row = new Models.DataTable.Row();
+                    row.Cells = new Models.DataTable.Cells();
+                    row.Cells.Cell = new List<Models.DataTable.Cell>();
                     for (var j = 0; j < oD_Ts.Columns.Count; j++)
                     {
                         var columnName = oD_Ts.Columns[j].Name;
                         var cellValue = oD_Ts[i, columnName];
-                        row.Cells.Cell.Add(new Models.Cell()
+                        row.Cells.Cell.Add(new Models.DataTable.Cell()
                         {
                             ColumnUid = columnName,
                             Value = cellValue,
                         });
                     }
-                    row.Cells.Cell.Add(new Models.Cell()
+                    row.Cells.Cell.Add(new Models.DataTable.Cell()
                     {
                         ColumnUid = "WHSE",
                         Value = "",
                     });
                     if (hTODTs.ContainsKey(keyHT))
                     {
-                        ((List<Models.Row>)hTODTs[keyHT]).Add(row);
+                        ((List<Models.DataTable.Row>)hTODTs[keyHT]).Add(row);
                     }
                     else
                     {
-                        hTODTs[keyHT] = new List<Models.Row>() { row };
-                        sTTValues.Add(new IDValue() { ID = sTT, Value = keyHT });
+                        hTODTs[keyHT] = new List<Models.DataTable.Row>() { row };
+                        vBELNs.Add(keyHT);
                     }
                     hTDTs.Add(i, row);
                     dataTable.Rows.Row.Add(row);
@@ -519,22 +551,79 @@ namespace AddOn_AC_AL.Functions
                 program.oProgBar.Stop();
                 System.Runtime.InteropServices.Marshal.ReleaseComObject(program.oProgBar);
                 program.oProgBar = null;
+                return new Tuple<Models.DataTable.DataTable, Hashtable, Hashtable, List<string>> (dataTable, hTODTs, hTDTs, vBELNs);
+            }
+            catch (Exception ex)
+            {
+                program.oProgBar.Stop();
+                System.Runtime.InteropServices.Marshal.ReleaseComObject(program.oProgBar);
+                program.oProgBar = null;
+                throw new Exception($"MapDataRFCToDataTable -> {ex.Message}");
+            }
+        }
 
-                var ser = new XmlSerializer(typeof(Models.DataTable));
+        /// <summary>
+        /// Xử lý và lưu dữ liệu vào memory để xử lý nhanh hơn.
+        /// </summary>
+        /// <param name="hTODTs"></param>
+        /// <param name="hTDTs"></param>
+        /// <param name="vBELNs"></param>
+        private void StoreDataCache(Hashtable hTODTs, Hashtable hTDTs, List<string> vBELNs)
+        {
+            try
+            {
+                var hTVal = new Hashtable();
+                var hTIndexGrid = new Hashtable();
+                var indexGrid = 0;
+                foreach (var vBELN in vBELNs)
+                {
+                    var valueHT = (List<Models.DataTable.Row>)hTODTs[vBELN];
+                    hTIndexGrid.Add(indexGrid, valueHT);
+                    indexGrid += valueHT.Count + 1;
+                }
+                hTVal.Add(KEY_HT_CACHE_DT, hTIndexGrid);
+                hTVal.Add(KEY_HT_CACHE_DT2, hTDTs);
+                if (this.program.hTFormData.ContainsKey(formID))
+                {
+                    this.program.hTFormData.Remove(formID);
+                }
+                this.program.hTFormData.Add(formID, hTVal);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"StoreDataCache -> {ex.Message}");
+            }
+        }
 
+        /// <summary>
+        /// Tải dữ liệu vào DataTable SAP từ XML (Nhanh hơn)
+        /// </summary>
+        /// <param name="dataTable"></param>
+        private void DataTableLoadDataFromXML(Models.DataTable.DataTable dataTable)
+        {
+            try
+            {
+                var ser = new XmlSerializer(typeof(Models.DataTable.DataTable));
                 var ms = new MemoryStream();
                 ser.Serialize(ms, dataTable);
                 ms.Position = 0;
-
                 var r = new StreamReader(ms);
                 var res = r.ReadToEnd();
-
                 oDataTable0.LoadFromXML(res);
+            } catch(Exception ex)
+            {
+                throw new Exception($"DataTableLoadDataFromXML -> {ex.Message}");
+            }
+        }
 
-                //for(var i = 0; i < oDataTable0.Rows.Count; i++)
-                //{
-                //    oDataTable0.SetValue("WHSE", i, "PTHA");
-                //}
+        private void DisplayData()
+        {
+            oForm.Freeze(true);
+            try
+            {
+                var t = MapDataRFCToDataTable();
+                StoreDataCache(t.Item2, t.Item3, t.Item4);
+                DataTableLoadDataFromXML(t.Item1);
 
                 oGrid.DataTable = oDataTable0;
                 oGrid.CollapseLevel = 1;
@@ -557,29 +646,10 @@ namespace AddOn_AC_AL.Functions
                 editCol.ChooseFromListAlias = "WhsCode";
                 editCol.LinkedObjectType = "64";
 
-                var hTVal = new Hashtable();
-                var hTIndexGrid = new Hashtable();
-                var indexGrid = 0;
-                foreach (var iDValue in sTTValues)
-                {
-                    var valueHT = (List<Models.Row>)hTODTs[iDValue.Value];
-                    hTIndexGrid.Add(indexGrid, valueHT);
-                    indexGrid += valueHT.Count + 1;
-                }
-                hTVal.Add(KEY_HT_CACHE_DT, hTIndexGrid);
-                hTVal.Add(KEY_HT_CACHE_DT2, hTDTs);
-                if (this.program.hTFormData.ContainsKey(formID))
-                {
-                    this.program.hTFormData.Remove(formID);
-                }
-                this.program.hTFormData.Add(formID, hTVal);
                 oForm.Freeze(false);
             }
             catch (Exception ex)
             {
-                program.oProgBar.Stop();
-                System.Runtime.InteropServices.Marshal.ReleaseComObject(program.oProgBar);
-                program.oProgBar = null;
                 oForm.Freeze(false);
                 SBO_Application.SetStatusBarMessage(ex.Message, BoMessageTime.bmt_Short, true);
             }
@@ -629,11 +699,11 @@ namespace AddOn_AC_AL.Functions
                 var oRecordSet = (SAPbobsCOM.Recordset)oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
                 oRecordSet.DoQuery(sQL);
                 var hTOUGP = new Hashtable();
-                while(!oRecordSet.EoF)
+                while (!oRecordSet.EoF)
                 {
                     var ugpEntry = oRecordSet.Fields.Item(0).Value;
                     var ugpCode = oRecordSet.Fields.Item(1).Value;
-                    if(!hTOUGP.ContainsKey(ugpCode))
+                    if (!hTOUGP.ContainsKey(ugpCode))
                     {
                         hTOUGP.Add(ugpCode, ugpEntry);
                     }
@@ -669,7 +739,7 @@ namespace AddOn_AC_AL.Functions
                             lineNum++;
                         }
                         var ret = oDocuments.Add();
-                        if(ret == 0)
+                        if (ret == 0)
                         {
                             var docEntry = "";
                             oCompany.GetNewObjectCode(out docEntry);
@@ -678,7 +748,8 @@ namespace AddOn_AC_AL.Functions
                                 IDS = docEntry,
                                 Value = first.VBELN
                             });
-                        } else
+                        }
+                        else
                         {
                             var errCode = 0;
                             var errMes = "";
@@ -687,12 +758,13 @@ namespace AddOn_AC_AL.Functions
                         }
                         System.Runtime.InteropServices.Marshal.ReleaseComObject(oLines);
                         System.Runtime.InteropServices.Marshal.ReleaseComObject(oDocuments);
-                    } catch(Exception ex)
+                    }
+                    catch (Exception ex)
                     {
                         SBO_Application.SetStatusBarMessage(ex.Message, BoMessageTime.bmt_Short, true);
                     }
                 }
-                if(docEntrys.Count != 0)
+                if (docEntrys.Count != 0)
                 {
                     var form = new DanhSachPOTaoThanhCong(this.SBO_Application, this.program, docEntrys, Guid.NewGuid().ToString().Substring(0, 8));
                     form.OpenForm();
