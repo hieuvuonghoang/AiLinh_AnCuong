@@ -81,23 +81,25 @@ namespace AddOn_AC_AL.Functions
                 switch (pVal.ItemUID)
                 {
                     case BTN_TEST_ID:
-                        var sQL = "SELECT UgpEntry, UgpCode FROM OUGP";
-                        var oRecordset = this.program.Recordset;
-                        oRecordset.DoQuery(sQL);
-                        var xml = oRecordset.GetAsXML();
-                        var serializer = new XmlSerializer(typeof(BOM));
-                        var hT = new Hashtable();
-                        using (var reader = new StringReader(xml))
-                        {
-                            var bOM = (BOM)serializer.Deserialize(reader);
-                            foreach(var row in bOM.BO.OUGP.Row)
-                            {
-                                if(!hT.ContainsKey(row.UgpEntry))
-                                {
-                                    hT.Add(row.UgpEntry, row);
-                                }
-                            }
-                        }
+
+
+                        //var sQL = "SELECT UgpEntry, UgpCode FROM OUGP";
+                        //var oRecordset = this.program.Recordset;
+                        //oRecordset.DoQuery(sQL);
+                        //var xml = oRecordset.GetAsXML();
+                        //var serializer = new XmlSerializer(typeof(BOM));
+                        //var hT = new Hashtable();
+                        //using (var reader = new StringReader(xml))
+                        //{
+                        //    var bOM = (BOM)serializer.Deserialize(reader);
+                        //    foreach(var row in bOM.BO.OUGP.Row)
+                        //    {
+                        //        if(!hT.ContainsKey(row.UgpEntry))
+                        //        {
+                        //            hT.Add(row.UgpEntry, row);
+                        //        }
+                        //    }
+                        //}
                         break;
                 }
             }

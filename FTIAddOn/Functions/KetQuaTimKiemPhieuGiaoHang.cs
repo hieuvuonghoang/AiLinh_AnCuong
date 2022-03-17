@@ -114,8 +114,8 @@ namespace AddOn_AC_AL.Functions
 
                 //SetTitleGrid();
 
-                oBtnCollapse.Item.Enabled = false;
-                oBtnExpand.Item.Enabled = false;
+                //oBtnCollapse.Item.Enabled = false;
+                //oBtnExpand.Item.Enabled = false;
                 //oBtnComboLoc.Item.Enabled = false;
 
                 oForm.Visible = true;
@@ -641,10 +641,14 @@ namespace AddOn_AC_AL.Functions
 
                 oGrid.Columns.Item("WHSE").Width = 130;
                 oGrid.Columns.Item("WHSE").Type = BoGridColumnType.gct_EditText;
-                EditTextColumn editCol = (EditTextColumn)oGrid.Columns.Item("WHSE");
+                EditTextColumn editCol = null;
+                editCol = (EditTextColumn)oGrid.Columns.Item("WHSE");
                 editCol.ChooseFromListUID = "CFL_0";
                 editCol.ChooseFromListAlias = "WhsCode";
                 editCol.LinkedObjectType = "64";
+                
+                editCol = (EditTextColumn)oGrid.Columns.Item("MATNR");
+                editCol.LinkedObjectType = "4";
 
                 oForm.Freeze(false);
             }
@@ -690,26 +694,57 @@ namespace AddOn_AC_AL.Functions
             }
         }
 
+        /// <summary>
+        /// Get all data table OUGP
+        /// </summary>
+        /// <returns>
+        /// Hashtable: Key: UgpEntry, Value: Models.OUGP.Row
+        /// </returns>
+        private Hashtable GetOUGPs()
+        {
+            try
+            {
+                var sQL = "";
+                switch(this.program.DBServerType)
+                {
+                    case SAPbobsCOM.BoDataServerTypes.dst_HANADB:
+                        sQL = "SELECT \"UgpEntry\", \"UgpCode\" FROM \"OUGP\"";
+                        break;
+                    default:
+                        sQL = "SELECT UgpEntry, UgpCode FROM OUGP";
+                        break;
+                }
+                var oRecordset = this.program.Recordset;
+                oRecordset.DoQuery(sQL);
+                var xml = oRecordset.GetAsXML();
+                var serializer = new XmlSerializer(typeof(Models.OUGP.BOM));
+                var hT = new Hashtable();
+                using (var reader = new StringReader(xml))
+                {
+                    var bOM = (Models.OUGP.BOM)serializer.Deserialize(reader);
+                    foreach (var row in bOM.BO.OUGP.Row)
+                    {
+                        if (!hT.ContainsKey(row.UgpEntry))
+                        {
+                            hT.Add(row.UgpEntry, row);
+                        }
+                    }
+                }
+                return hT;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"GetOUGPs => {ex.Message}");
+            }
+        }
+
         private void TaoPO(List<RowData> rowDatas)
         {
             try
             {
-                var oCompany = (SAPbobsCOM.Company)SBO_Application.Company.GetDICompany();
-                var sQL = "SELECT \"UgpEntry\", \"UgpCode\" FROM \"OUGP\"";
-                var oRecordSet = (SAPbobsCOM.Recordset)oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
-                oRecordSet.DoQuery(sQL);
-                var hTOUGP = new Hashtable();
-                while (!oRecordSet.EoF)
-                {
-                    var ugpEntry = oRecordSet.Fields.Item(0).Value;
-                    var ugpCode = oRecordSet.Fields.Item(1).Value;
-                    if (!hTOUGP.ContainsKey(ugpCode))
-                    {
-                        hTOUGP.Add(ugpCode, ugpEntry);
-                    }
-                    oRecordSet.MoveNext();
-                }
+                var oCompany = this.program.Company;
                 var docEntrys = new List<IDValue>();
+                var hTOUGP = GetOUGPs();
                 foreach (var gR in rowDatas.GroupBy(it => it.VBELN))
                 {
                     try
@@ -730,7 +765,7 @@ namespace AddOn_AC_AL.Functions
                             oLines.ItemCode = row.MATNR;
                             if (hTOUGP.ContainsKey(row.VRKME))
                             {
-                                oLines.UoMEntry = (int)hTOUGP[row.VRKME];
+                                oLines.UoMEntry = ((Models.OUGP.Row)hTOUGP[row.VRKME]).UgpEntry;
                             }
                             oLines.Quantity = double.Parse(row.LFIMG);
                             oLines.UnitPrice = double.Parse(row.UNITPRICE);

@@ -2,6 +2,7 @@
 using SAPbouiCOM;
 using AddOn_AC_AL.Functions;
 using System.Collections;
+using SAPbobsCOM;
 
 namespace FTIAddOn
 {
@@ -29,6 +30,8 @@ namespace FTIAddOn
         private SAPbouiCOM.Application SBO_Application;
         private SAPbobsCOM.Company oCompany;
         private SAPbobsCOM.Recordset oRecordset;
+
+        public SAPbobsCOM.Company Company => oCompany;
 
         public SAPbobsCOM.Recordset Recordset => oRecordset;
 
@@ -62,6 +65,9 @@ namespace FTIAddOn
         /// </summary>
         private const string FORM_TYPE_TFUNC = "UF_TFUNC";
         public string formTypeTFUNC => FORM_TYPE_TFUNC;
+
+        private BoDataServerTypes oDBServerType;
+        public BoDataServerTypes DBServerType => oDBServerType;
 
         public Program()
         {
@@ -100,6 +106,8 @@ namespace FTIAddOn
             SBO_Application = SboGuiApi.GetApplication(-1);
 
             oCompany = SBO_Application.Company.GetDICompany();
+
+            oDBServerType = oCompany.DbServerType;
 
             oRecordset = oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
 
