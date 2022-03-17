@@ -17,7 +17,7 @@ namespace AddOn_AC_AL.Functions
     {
         private SAPbouiCOM.Application SBO_Application;
         private Program program;
-        private RFCTable oD_Ts;
+        //private RFCTable oD_Ts;
 
         private string formID = "";
         private string formType => this.program.formTypeKQTKPGH;
@@ -36,11 +36,14 @@ namespace AddOn_AC_AL.Functions
         private const string UD_TU_NGAY_ID = "UD_1";
         private const string UD_DEN_NGAY_ID = "UD_2";
         private const string UD_LOC_VALUE_ID = "UD_3";
+        private const string UD_EXIST_CACHE_ID = "UD_4";
+        private const string UD_FORM_READY_ID = "UD_5";
 
         private const string KEY_HT_CACHE_DT = "HTCACHEDT";
         private const string KEY_HT_CACHE_DT2 = "HTCACHED2";
+        private const string KEY_HT_CACHE_DT3 = "HTCACHED3";
 
-        private string Parameters;
+        private const string ERR_NOT_FOUND_CACE = "Lỗi khi dữ liệu cache, vui lòng thử thực hiện 'Tìm kiếm' lại!";
 
         private SAPbouiCOM.Form oForm => SBO_Application.Forms.Item(formID);
         private SAPbouiCOM.DataTable oDataTable0
@@ -60,17 +63,17 @@ namespace AddOn_AC_AL.Functions
         private SAPbouiCOM.UserDataSource uDTuNgay => oForm.DataSources.UserDataSources.Item(UD_TU_NGAY_ID);
         private SAPbouiCOM.UserDataSource uDDenNgay => oForm.DataSources.UserDataSources.Item(UD_DEN_NGAY_ID);
         private SAPbouiCOM.UserDataSource uDLocDuLieu => oForm.DataSources.UserDataSources.Item(UD_LOC_VALUE_ID);
+        private SAPbouiCOM.UserDataSource uDExistCache => oForm.DataSources.UserDataSources.Item(UD_EXIST_CACHE_ID);
+        private SAPbouiCOM.UserDataSource uDFormReady => oForm.DataSources.UserDataSources.Item(UD_FORM_READY_ID);
         private SAPbouiCOM.Button oBtnCollapse => oForm.Items.Item(BTN_COLLAPSE_ID).Specific;
         private SAPbouiCOM.Button oBtnExpand => oForm.Items.Item(BTN_EXPAND_ID).Specific;
         private SAPbouiCOM.ButtonCombo oBtnComboLoc => oForm.Items.Item(BTN_CB_LOC_ID).Specific;
 
-        public KetQuaTimKiemPhieuGiaoHang(SAPbouiCOM.Application SBO_Application, Program program, RFCTable oD_Ts, string parameters, string formID)
+        private enum FillterType
         {
-            this.SBO_Application = SBO_Application;
-            this.program = program;
-            this.formID = formID;
-            this.oD_Ts = oD_Ts;
-            this.Parameters = parameters;
+            All = 1,
+            NotFound = 2,
+            Exist = 3,
         }
 
         public KetQuaTimKiemPhieuGiaoHang(SAPbouiCOM.Application SBO_Application, Program program, string formID)
@@ -101,11 +104,10 @@ namespace AddOn_AC_AL.Functions
                 oForm.Items.Item("Item_6").TextStyle = 1;
 
                 oBtnComboLoc.Item.DisplayDesc = true;
-                oBtnComboLoc.ValidValues.Add("1", "Tất cả");
-                oBtnComboLoc.ValidValues.Add("2", "OD chưa có trong hệ thống");
-                oBtnComboLoc.ValidValues.Add("3", "OD đã tồn tại trong hệ thống");
+                oBtnComboLoc.ValidValues.Add(((int)FillterType.All).ToString(), "Tất cả");
+                oBtnComboLoc.ValidValues.Add(((int)FillterType.NotFound).ToString(), "OD chưa có trong hệ thống");
+                oBtnComboLoc.ValidValues.Add(((int)FillterType.Exist).ToString(), "OD đã tồn tại trong hệ thống");
                 oBtnComboLoc.Select(0, BoSearchKey.psk_Index);
-                
 
                 //oGrid.DataTable = oDataTable0;
                 //oGrid.CollapseLevel = 1;
@@ -117,7 +119,7 @@ namespace AddOn_AC_AL.Functions
                 //oBtnCollapse.Item.Enabled = false;
                 //oBtnExpand.Item.Enabled = false;
                 //oBtnComboLoc.Item.Enabled = false;
-
+                uDFormReady.Value = "Y";
                 oForm.Visible = true;
             }
             catch (Exception ex)
@@ -188,13 +190,53 @@ namespace AddOn_AC_AL.Functions
                         AfterAction_CFL(formUID, ref pVal, out bubbleEvent);
                         break;
                     case BoEventTypes.et_COMBO_SELECT:
-                        var a = uDLocDuLieu.Value;
+                        AfterAction_Combo_Select(formUID, ref pVal, out bubbleEvent);
                         break;
                 }
             }
             catch (Exception ex)
             {
                 SBO_Application.SetStatusBarMessage(ex.Message, BoMessageTime.bmt_Short, true);
+            }
+        }
+
+        private void AfterAction_Combo_Select(object forumUID, ref ItemEvent pVal, out bool bubbleEvent)
+        {
+            bubbleEvent = true;
+            try
+            {
+                switch (pVal.ItemUID)
+                {
+                    case BTN_CB_LOC_ID:
+                        //Khi form initial thực hiện set value default cho commbobox cần bỏ qua
+                        if (uDFormReady.Value != "Y")
+                            return;
+                        //Đọc dữ liệu từ cache
+                        RFCTable oDTs = null;
+                        if (uDExistCache.Value == "N")
+                        {
+                            throw new Exception(ERR_NOT_FOUND_CACE);
+                        }
+                        if (!this.program.hTFormData.ContainsKey(formID))
+                        {
+                            throw new Exception(ERR_NOT_FOUND_CACE);
+                        }
+                        else
+                        {
+                            oDTs = (RFCTable)((Hashtable)this.program.hTFormData[formID])[KEY_HT_CACHE_DT3];
+                        }
+                        var filterValue = (FillterType)(int.Parse(uDLocDuLieu.Value));
+                        var hT = new Hashtable();
+                        hT.Add("6000610440", "");
+                        var t = MapDataRFCToDataTable(oDTs, filterValue, hT);
+                        StoreDataCache(t.Item2, t.Item3, t.Item4, oDTs);
+                        DisplayData(t.Item1);
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"AfterAction_Combo_Select -> {ex.Message}");
             }
         }
 
@@ -210,13 +252,17 @@ namespace AddOn_AC_AL.Functions
                         {
                             case "WHSE":
                                 Hashtable hTDT = null;
-                                if (this.program.hTFormData.ContainsKey(formID) && ((Hashtable)this.program.hTFormData[formID]).ContainsKey(KEY_HT_CACHE_DT2))
+                                if (uDExistCache.Value == "N")
+                                {
+                                    throw new Exception("Lỗi khi lưu cache, vui lòng thử thực hiện 'Tìm kiếm' lại!");
+                                }
+                                if (!this.program.hTFormData.ContainsKey(formID))
+                                {
+                                    throw new Exception(ERR_NOT_FOUND_CACE);
+                                }
+                                else
                                 {
                                     hTDT = (Hashtable)((Hashtable)this.program.hTFormData[formID])[KEY_HT_CACHE_DT2];
-                                }
-                                if (hTDT == null)
-                                {
-                                    throw new Exception($"Không tìm thấy dữ liệu cache, vui lòng đóng cửa sổ và thử tải lại!");
                                 }
                                 var oCFLEvent = (IChooseFromListEvent)pVal;
                                 var oDataTable = oCFLEvent.SelectedObjects;
@@ -253,6 +299,13 @@ namespace AddOn_AC_AL.Functions
                 switch (pVal.ItemUID)
                 {
                     case BTN_TIM_KIEM_ID:
+                        //Xóa dữ liệu
+                        uDExistCache.Value = "N";
+                        oDataTable0.Rows.Clear();
+                        if (this.program.hTFormData.ContainsKey(formID))
+                        {
+                            this.program.hTFormData.Remove(formID);
+                        }
                         var soOD = uDSoPGH.Value;
                         if (string.IsNullOrEmpty(uDTuNgay.Value))
                         {
@@ -266,7 +319,14 @@ namespace AddOn_AC_AL.Functions
                         }
                         var tuNgay = DateTime.ParseExact(uDTuNgay.Value, "dd.MM.yy", null);
                         var denNgay = DateTime.ParseExact(uDDenNgay.Value, "dd.MM.yy", null);
-                        Call_YAC_FM_FTI_GET_OD(soOD, tuNgay, denNgay);
+                        var oDTs = Call_YAC_FM_FTI_GET_OD(soOD, tuNgay, denNgay);
+                        var filterValue = (FillterType)(int.Parse(uDLocDuLieu.Value));
+                        var hT = new Hashtable();
+                        hT.Add("6000610440", "");
+                        var t = MapDataRFCToDataTable(oDTs, filterValue, hT);
+                        StoreDataCache(t.Item2, t.Item3, t.Item4, oDTs);
+                        DisplayData(t.Item1);
+                        uDExistCache.Value = "Y";
                         break;
                     case BTN_COLLAPSE_ID:
                         oGrid.Rows.CollapseAll();
@@ -293,9 +353,13 @@ namespace AddOn_AC_AL.Functions
                         break;
                     case BTN_TAO_PO_ID:
                         Hashtable hTDT = null;
+                        if(uDExistCache.Value == "N")
+                        {
+                            throw new Exception("Lỗi khi lưu cache, vui lòng thử thực hiện 'Tìm kiếm' lại!");
+                        }
                         if (!this.program.hTFormData.ContainsKey(formID))
                         {
-                            throw new Exception($"Không tìm thấy dữ liệu cache, vui lòng đóng cửa sổ và thử tải lại!");
+                            throw new Exception(ERR_NOT_FOUND_CACE);
                         }
                         else
                         {
@@ -412,16 +476,6 @@ namespace AddOn_AC_AL.Functions
                             case "WHSE":
                                 break;
                         }
-                        //if (pVal.ColUID == "RowsHeader")
-                        //{
-                        //    if (pVal.Modifiers != BoModifiersEnum.mt_CTRL && !oDataTable1.IsEmpty)
-                        //    {
-                        //        oDataTable1.Rows.Clear();
-                        //    }
-                        //    oDataTable1.Rows.Add(1);
-                        //    oDataTable1.Rows.Offset = oDataTable1.Rows.Count - 1;
-                        //    oDataTable1.SetValue(0, oDataTable1.Rows.Offset, pVal.Row);
-                        //}
                         break;
                 }
             }
@@ -431,7 +485,14 @@ namespace AddOn_AC_AL.Functions
             }
         }
 
-        private void Call_YAC_FM_FTI_GET_OD(string soOD, DateTime tuNgay, DateTime denNgay)
+        /// <summary>
+        /// Gọi RFC trong hệ thống AnCuong theo tài liệu hướng dẫn tích hợp AnCuong cung cấp
+        /// </summary>
+        /// <param name="soOD"></param>
+        /// <param name="tuNgay"></param>
+        /// <param name="denNgay"></param>
+        /// <returns></returns>
+        private RFCTable Call_YAC_FM_FTI_GET_OD(string soOD, DateTime tuNgay, DateTime denNgay)
         {
             R3Connection con = null;
             program.oProgBar = SBO_Application.StatusBar.CreateProgressBar("Đang tải dữ liệu...", 10, true);
@@ -454,11 +515,9 @@ namespace AddOn_AC_AL.Functions
                 program.oProgBar = null;
                 if (exValue.ParamValue.Equals(0))
                 {
-                    SBO_Application.SetStatusBarMessage("Fail OD không hợp lệ!", BoMessageTime.bmt_Short, true);
-                    return;
+                    throw new Exception("Fail OD không hợp lệ!");
                 }
-                this.oD_Ts = oD_Ts;
-                DisplayData();
+                return oD_Ts;
             }
             catch (Exception ex)
             {
@@ -466,7 +525,7 @@ namespace AddOn_AC_AL.Functions
                 System.Runtime.InteropServices.Marshal.ReleaseComObject(program.oProgBar);
                 program.oProgBar = null;
                 con.Close();
-                SBO_Application.SetStatusBarMessage(ex.Message, BoMessageTime.bmt_Short, true);
+                throw new Exception($"Call_YAC_FM_FTI_GET_OD -> {ex.Message}");
             }
         }
 
@@ -505,7 +564,7 @@ namespace AddOn_AC_AL.Functions
         /// + Item3 (Key: IndexOfDataTable SAP, Value: Models.DataTable.Row)
         /// + Item4 List<string> thứ tự VBELN RFC trả về
         /// </returns>
-        private Tuple<Models.DataTable.DataTable, Hashtable, Hashtable, List<string>> MapDataRFCToDataTable()
+        private Tuple<Models.DataTable.DataTable, Hashtable, Hashtable, List<string>> MapDataRFCToDataTable(RFCTable oD_Ts, FillterType fillterType = 0, Hashtable hTMaODs = null)
         {
             program.oProgBar = SBO_Application.StatusBar.CreateProgressBar("Đang xử lý dữ liệu...", oD_Ts.RowCount, true);
             try
@@ -517,6 +576,22 @@ namespace AddOn_AC_AL.Functions
                 for (var i = 0; i < oD_Ts.RowCount; i++)
                 {
                     var keyHT = (string)oD_Ts[i, "VBELN"];
+                    //Hiển thị những OD đã tồn tại trong hệ thống
+                    if(fillterType == FillterType.Exist)
+                    {
+                        if(hTMaODs != null && !hTMaODs.ContainsKey(keyHT))
+                        {
+                            continue;
+                        }
+                    }
+                    //Hiển thị những OD không tồn tại trong hệ thống
+                    else if(fillterType == FillterType.NotFound)
+                    {
+                        if (hTMaODs != null && hTMaODs.ContainsKey(keyHT))
+                        {
+                            continue;
+                        }
+                    }
                     var row = new Models.DataTable.Row();
                     row.Cells = new Models.DataTable.Cells();
                     row.Cells.Cell = new List<Models.DataTable.Cell>();
@@ -551,7 +626,7 @@ namespace AddOn_AC_AL.Functions
                 program.oProgBar.Stop();
                 System.Runtime.InteropServices.Marshal.ReleaseComObject(program.oProgBar);
                 program.oProgBar = null;
-                return new Tuple<Models.DataTable.DataTable, Hashtable, Hashtable, List<string>> (dataTable, hTODTs, hTDTs, vBELNs);
+                return new Tuple<Models.DataTable.DataTable, Hashtable, Hashtable, List<string>>(dataTable, hTODTs, hTDTs, vBELNs);
             }
             catch (Exception ex)
             {
@@ -562,13 +637,28 @@ namespace AddOn_AC_AL.Functions
             }
         }
 
+        private List<string> GetMaODs(RFCTable oD_Ts)
+        {
+            var rets = new List<string>();
+            var hT = new Hashtable();
+            for (var i = 0; i < oD_Ts.RowCount; i++)
+            {
+                var maOD = (string)oD_Ts[i, "VBELN"];
+                if (hT.ContainsKey(maOD))
+                    continue;
+                hT.Add(maOD, "");
+                rets.Add(maOD);
+            }
+            return rets;
+        }
+
         /// <summary>
         /// Xử lý và lưu dữ liệu vào memory để xử lý nhanh hơn.
         /// </summary>
         /// <param name="hTODTs"></param>
         /// <param name="hTDTs"></param>
         /// <param name="vBELNs"></param>
-        private void StoreDataCache(Hashtable hTODTs, Hashtable hTDTs, List<string> vBELNs)
+        private void StoreDataCache(Hashtable hTODTs, Hashtable hTDTs, List<string> vBELNs, RFCTable oDTs)
         {
             try
             {
@@ -583,6 +673,7 @@ namespace AddOn_AC_AL.Functions
                 }
                 hTVal.Add(KEY_HT_CACHE_DT, hTIndexGrid);
                 hTVal.Add(KEY_HT_CACHE_DT2, hTDTs);
+                hTVal.Add(KEY_HT_CACHE_DT3, oDTs);
                 if (this.program.hTFormData.ContainsKey(formID))
                 {
                     this.program.hTFormData.Remove(formID);
@@ -610,24 +701,29 @@ namespace AddOn_AC_AL.Functions
                 var r = new StreamReader(ms);
                 var res = r.ReadToEnd();
                 oDataTable0.LoadFromXML(res);
-            } catch(Exception ex)
+            }
+            catch (Exception ex)
             {
                 throw new Exception($"DataTableLoadDataFromXML -> {ex.Message}");
             }
         }
 
-        private void DisplayData()
+        /// <summary>
+        /// Hiển thị dữ liệu lên Grid từ dữ liệu .NET Datatable (Lấy về từ RFC)
+        /// </summary>
+        /// <param name="dataTable"></param>
+        private void DisplayData(Models.DataTable.DataTable dataTable)
         {
             oForm.Freeze(true);
             try
             {
-                var t = MapDataRFCToDataTable();
-                StoreDataCache(t.Item2, t.Item3, t.Item4);
-                DataTableLoadDataFromXML(t.Item1);
+                DataTableLoadDataFromXML(dataTable);
+
+                //Xóa dữ liệu dòng đã chọn khi hiển thị lại oGrid
+                oDataTable1.Rows.Clear();
 
                 oGrid.DataTable = oDataTable0;
                 oGrid.CollapseLevel = 1;
-                oGrid.AutoResizeColumns();
                 oGrid.SelectionMode = BoMatrixSelect.ms_Auto;
 
                 for (var i = 0; i < oGrid.Columns.Count; i++)
@@ -646,9 +742,11 @@ namespace AddOn_AC_AL.Functions
                 editCol.ChooseFromListUID = "CFL_0";
                 editCol.ChooseFromListAlias = "WhsCode";
                 editCol.LinkedObjectType = "64";
-                
+
                 editCol = (EditTextColumn)oGrid.Columns.Item("MATNR");
                 editCol.LinkedObjectType = "4";
+
+                oGrid.AutoResizeColumns();
 
                 oForm.Freeze(false);
             }
@@ -659,6 +757,9 @@ namespace AddOn_AC_AL.Functions
             }
         }
 
+        /// <summary>
+        /// Set title cho Grid
+        /// </summary>
         private void SetTitleGrid()
         {
             try
@@ -705,7 +806,7 @@ namespace AddOn_AC_AL.Functions
             try
             {
                 var sQL = "";
-                switch(this.program.DBServerType)
+                switch (this.program.DBServerType)
                 {
                     case SAPbobsCOM.BoDataServerTypes.dst_HANADB:
                         sQL = "SELECT \"UgpEntry\", \"UgpCode\" FROM \"OUGP\"";
@@ -738,6 +839,10 @@ namespace AddOn_AC_AL.Functions
             }
         }
 
+        /// <summary>
+        /// Tạo PO trên hệ thống B1
+        /// </summary>
+        /// <param name="rowDatas"></param>
         private void TaoPO(List<RowData> rowDatas)
         {
             try
