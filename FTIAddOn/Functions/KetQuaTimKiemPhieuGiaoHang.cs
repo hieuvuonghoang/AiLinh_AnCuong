@@ -227,7 +227,7 @@ namespace AddOn_AC_AL.Functions
                         }
                         var filterValue = (FillterType)(int.Parse(uDLocDuLieu.Value));
                         var hT = new Hashtable();
-                        hT.Add("6000610440", "");
+                        hT.Add("6000644722", "");
                         var t = MapDataRFCToDataTable(oDTs, filterValue, hT);
                         StoreDataCache(t.Item2, t.Item3, t.Item4, oDTs);
                         DisplayData(t.Item1);
@@ -322,7 +322,7 @@ namespace AddOn_AC_AL.Functions
                         var oDTs = Call_YAC_FM_FTI_GET_OD(soOD, tuNgay, denNgay);
                         var filterValue = (FillterType)(int.Parse(uDLocDuLieu.Value));
                         var hT = new Hashtable();
-                        hT.Add("6000610440", "");
+                        hT.Add("6000644722", "");
                         var t = MapDataRFCToDataTable(oDTs, filterValue, hT);
                         StoreDataCache(t.Item2, t.Item3, t.Item4, oDTs);
                         DisplayData(t.Item1);

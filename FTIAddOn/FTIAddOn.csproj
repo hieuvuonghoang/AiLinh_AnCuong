@@ -90,9 +90,8 @@
   </PropertyGroup>
   <PropertyGroup />
   <ItemGroup>
-    <Reference Include="ConnectSAP, Version=1.0.0.0, Culture=neutral, processorArchitecture=x86">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\Packages\ConnectSAP.dll</HintPath>
+    <Reference Include="ConnectSAP">
+      <HintPath>..\Packages\ConnectSAP_x64\ConnectSAP.dll</HintPath>
     </Reference>
     <Reference Include="ERPConnect35, Version=4.1.0.19, Culture=neutral, PublicKeyToken=737201975e95eeee, processorArchitecture=MSIL">
       <HintPath>..\Packages\ERPConnect35.dll</HintPath>
