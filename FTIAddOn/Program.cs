@@ -31,16 +31,8 @@ namespace FTIAddOn
 
         private SAPbouiCOM.Application SBO_Application;
         private SAPbobsCOM.Company oCompany;
-        private SAPbobsCOM.Recordset oRecordset;
 
         public SAPbobsCOM.Company Company => oCompany;
-
-        public SAPbobsCOM.Recordset Recordset => oRecordset;
-
-        /// <summary>
-        /// Menu Test ID
-        /// </summary>
-        private const string MENU_TEST_ID = "fa2372bd";
 
         /// <summary>
         /// MENUID: Tìm kiếm phiếu giao hàng
@@ -61,12 +53,6 @@ namespace FTIAddOn
 
         private const string FORM_TYPE_DSPOTTC = "UF_DSPOTTC";
         public string formTypeDSPOTTC => FORM_TYPE_DSPOTTC;
-
-        /// <summary>
-        /// FORM TYPE: Test function
-        /// </summary>
-        private const string FORM_TYPE_TFUNC = "UF_TFUNC";
-        public string formTypeTFUNC => FORM_TYPE_TFUNC;
 
         private BoDataServerTypes oDBServerType;
         public BoDataServerTypes DBServerType => oDBServerType;
@@ -111,8 +97,6 @@ namespace FTIAddOn
 
             oDBServerType = oCompany.DbServerType;
 
-            oRecordset = oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
-
             SBO_Application.SetStatusBarMessage("Connected!", SAPbouiCOM.BoMessageTime.bmt_Short, false);
         }
 
@@ -127,20 +111,12 @@ namespace FTIAddOn
             // add an event type to the container
             // this method returns an EventFilter object
 
-            //oFilter = oFilters.Add(SAPbouiCOM.BoEventTypes.et_MENU_CLICK);
-            //oFilter = oFilters.Add(SAPbouiCOM.BoEventTypes.et_CLICK);
-            //oFilter = oFilters.Add(SAPbouiCOM.BoEventTypes.et_KEY_DOWN);
-            //oFilter = oFilters.Add(SAPbouiCOM.BoEventTypes.et_ALL_EVENTS);
-            //oFilter = oFilters.Add(SAPbouiCOM.BoEventTypes.et_FORM_KEY_DOWN);
-            //oFilter.AddEx(FORM_TYPE_TKPGH);
             oFilter = oFilters.Add(SAPbouiCOM.BoEventTypes.et_CLICK);
             oFilter = oFilters.Add(SAPbouiCOM.BoEventTypes.et_CHOOSE_FROM_LIST);
             oFilter = oFilters.Add(SAPbouiCOM.BoEventTypes.et_MENU_CLICK);
             oFilter = oFilters.Add(SAPbouiCOM.BoEventTypes.et_COMBO_SELECT);
             oFilter.AddEx(FORM_TYPE_KQTKPGH);
-            oFilter.AddEx(FORM_TYPE_TFUNC);
-            // assign the form type on which the event would be processed
-            //oFilter.AddEx("139"); // Orders Form
+
             SBO_Application.SetFilter(oFilters);
         }
 
@@ -163,7 +139,7 @@ namespace FTIAddOn
             {
                 SBO_Application.MessageBox("Progress Bar stopped by user, releasing progress bar", 1, "Ok", "", "");
                 // Stopping the progress bar, thus loosing it's values.
-                if(oProgBar != null)
+                if (oProgBar != null)
                 {
                     oProgBar.Stop();
                     oProgBar = null;
@@ -174,7 +150,7 @@ namespace FTIAddOn
         private void SBO_Application_MenuEvent(ref MenuEvent pVal, out bool BubbleEvent)
         {
             BubbleEvent = true;
-            if(!pVal.BeforeAction)
+            if (!pVal.BeforeAction)
             {
                 switch (pVal.MenuUID)
                 {
@@ -183,11 +159,6 @@ namespace FTIAddOn
                         kQTKPGH.OpenForm();
                         kQTKPGH = null;
                         break;
-                    case MENU_TEST_ID:
-                        var tFunction = new TestFunction(SBO_Application, this, Guid.NewGuid().ToString().Substring(0, 8));
-                        tFunction.OpenForm();
-                        tFunction = null;
-                        break;
                 }
             }
         }
@@ -195,27 +166,18 @@ namespace FTIAddOn
         private void SBO_Application_ItemEvent(string FormUID, ref ItemEvent pVal, out bool BubbleEvent)
         {
             BubbleEvent = true;
-            if(!pVal.BeforeAction)
+            if (!pVal.BeforeAction)
             {
                 switch (pVal.FormTypeEx)
                 {
-                    case FORM_TYPE_TKPGH:
-                        //var tKPGH = new TimKiemPhieuGiaoHang(SBO_Application, this, pVal.FormUID);
-                        //tKPGH.SBO_Application_ItemEvent_AfterAction(FormUID, ref pVal, out BubbleEvent);
-                        //tKPGH = null;
-                        break;
                     case FORM_TYPE_KQTKPGH:
                         var kQTKPGH = new KetQuaTimKiemPhieuGiaoHang(SBO_Application, this, pVal.FormUID);
                         kQTKPGH.SBO_Application_ItemEvent_AfterAction(FormUID, ref pVal, out BubbleEvent);
                         kQTKPGH = null;
                         break;
-                    case FORM_TYPE_TFUNC:
-                        var tFUNC = new TestFunction(SBO_Application, this, pVal.FormUID);
-                        tFUNC.SBO_Application_ItemEvent_AfterAction(FormUID, ref pVal, out BubbleEvent);
-                        tFUNC = null;
-                        break;
                 }
-            } else
+            }
+            else
             {
                 switch (pVal.FormTypeEx)
                 {
@@ -241,8 +203,7 @@ namespace FTIAddOn
         private void CreateMenu()
         {
             FTIGlobal.PublicFunctions.CreateMenu(MENU_TKPGH_ID, "Tìm kiếm phiếu giao hàng - An Cường", BoMenuType.mt_STRING, "2304", SBO_Application);
-            FTIGlobal.PublicFunctions.CreateMenu(MENU_TEST_ID, "Test Function", BoMenuType.mt_STRING, "2304", SBO_Application);
         }
-        
+
     }
 }

@@ -107,7 +107,7 @@ namespace AddOn_AC_AL.Functions
                 oBtnComboLoc.ValidValues.Add(((int)FillterType.All).ToString(), "Tất cả");
                 oBtnComboLoc.ValidValues.Add(((int)FillterType.NotFound).ToString(), "OD chưa có trong hệ thống");
                 oBtnComboLoc.ValidValues.Add(((int)FillterType.Exist).ToString(), "OD đã tồn tại trong hệ thống");
-                oBtnComboLoc.Select(0, BoSearchKey.psk_Index);
+                oBtnComboLoc.Select(1, BoSearchKey.psk_Index);
 
                 //oGrid.DataTable = oDataTable0;
                 //oGrid.CollapseLevel = 1;
@@ -120,6 +120,9 @@ namespace AddOn_AC_AL.Functions
                 //oBtnExpand.Item.Enabled = false;
                 //oBtnComboLoc.Item.Enabled = false;
                 uDFormReady.Value = "Y";
+
+                
+
                 oForm.Visible = true;
             }
             catch (Exception ex)
@@ -226,8 +229,8 @@ namespace AddOn_AC_AL.Functions
                             oDTs = (RFCTable)((Hashtable)this.program.hTFormData[formID])[KEY_HT_CACHE_DT3];
                         }
                         var filterValue = (FillterType)(int.Parse(uDLocDuLieu.Value));
-                        var hT = new Hashtable();
-                        hT.Add("6000644722", "");
+                        var hT = MaODTonTaiTrongHeThong(oDTs);
+                        //hT.Add("6000644722", "");
                         var t = MapDataRFCToDataTable(oDTs, filterValue, hT);
                         StoreDataCache(t.Item2, t.Item3, t.Item4, oDTs);
                         DisplayData(t.Item1);
@@ -277,6 +280,7 @@ namespace AddOn_AC_AL.Functions
                                         if (cell.ColumnUid == "WHSE")
                                         {
                                             cell.Value = whse;
+                                            break;
                                         }
                                     }
                                 }
@@ -321,8 +325,9 @@ namespace AddOn_AC_AL.Functions
                         var denNgay = DateTime.ParseExact(uDDenNgay.Value, "dd.MM.yy", null);
                         var oDTs = Call_YAC_FM_FTI_GET_OD(soOD, tuNgay, denNgay);
                         var filterValue = (FillterType)(int.Parse(uDLocDuLieu.Value));
-                        var hT = new Hashtable();
-                        hT.Add("6000644722", "");
+                        //var hT = new Hashtable();
+                        //hT.Add("6000644722", "");
+                        var hT = MaODTonTaiTrongHeThong(oDTs);
                         var t = MapDataRFCToDataTable(oDTs, filterValue, hT);
                         StoreDataCache(t.Item2, t.Item3, t.Item4, oDTs);
                         DisplayData(t.Item1);
@@ -353,7 +358,7 @@ namespace AddOn_AC_AL.Functions
                         break;
                     case BTN_TAO_PO_ID:
                         Hashtable hTDT = null;
-                        if(uDExistCache.Value == "N")
+                        if (uDExistCache.Value == "N")
                         {
                             throw new Exception("Lỗi khi lưu cache, vui lòng thử thực hiện 'Tìm kiếm' lại!");
                         }
@@ -530,6 +535,67 @@ namespace AddOn_AC_AL.Functions
         }
 
         /// <summary>
+        /// Check Mã OD trong bảng OPOR
+        /// </summary>
+        /// <param name="oD_Ts"></param>
+        /// <returns></returns>
+        private Hashtable MaODTonTaiTrongHeThong(RFCTable oD_Ts)
+        {
+            var ret = new Hashtable();
+            var hTBBELN = new Hashtable();
+            for (var i = 0; i < oD_Ts.RowCount; i++)
+            {
+                var keyHT = (string)oD_Ts[i, "VBELN"];
+                if(!hTBBELN.ContainsKey(keyHT))
+                {
+                    hTBBELN.Add(keyHT, "");
+                }
+            }
+            var bBELNs = hTBBELN.Keys.OfType<string>().ToList();
+            var sQLQueryFormat = "";
+            switch (this.program.DBServerType)
+            {
+                case SAPbobsCOM.BoDataServerTypes.dst_HANADB:
+                    sQLQueryFormat = "SELECT \"DocNum\", \"U_SOD\" FROM \"OPOR\" WHERE \"U_SOD\" IN ({0})";
+                    break;
+                default:
+                    sQLQueryFormat = "SELECT DocNum, U_SOD FROM OPOR WHERE U_SOD IN ({0})";
+                    break;
+            }
+            var nRowInPage = 200;
+            var nPage = bBELNs.Count / nRowInPage;
+            if(bBELNs.Count % nRowInPage != 0)
+            {
+                nPage = nPage + 1;
+            }
+            var oRecordset = (SAPbobsCOM.Recordset)this.program.Company.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            for (var i = 0; i < nPage; i++)
+            {
+                var conditionIn = string.Join(", ", 
+                    bBELNs
+                    .OrderBy(it => it)
+                    .Skip(i * nRowInPage)
+                    .Take(nRowInPage)
+                    .Select(it => string.Format("'{0}'", it))
+                    .ToList()
+                    );
+                var sQLQuery = string.Format(sQLQueryFormat, conditionIn);
+                oRecordset.DoQuery(sQLQuery);
+                while(!oRecordset.EoF)
+                {
+                    var docNum = (int)oRecordset.Fields.Item(0).Value;
+                    var sOD = (string)oRecordset.Fields.Item(1).Value;
+                    if(!ret.ContainsKey(sOD))
+                    {
+                        ret.Add(sOD, docNum);
+                    }
+                    oRecordset.MoveNext();
+                }
+            }
+            return ret;
+        }
+
+        /// <summary>
         /// Từ chuỗi XML cấu trúc DataTable của SAP tạo đối tượng DataTable trong .NET
         /// </summary>
         /// <returns></returns>
@@ -573,19 +639,20 @@ namespace AddOn_AC_AL.Functions
                 var hTODTs = new Hashtable();
                 var hTDTs = new Hashtable();
                 var vBELNs = new List<string>();
+                var iRow = 0;
                 for (var i = 0; i < oD_Ts.RowCount; i++)
                 {
                     var keyHT = (string)oD_Ts[i, "VBELN"];
                     //Hiển thị những OD đã tồn tại trong hệ thống
-                    if(fillterType == FillterType.Exist)
+                    if (fillterType == FillterType.Exist)
                     {
-                        if(hTMaODs != null && !hTMaODs.ContainsKey(keyHT))
+                        if (hTMaODs != null && !hTMaODs.ContainsKey(keyHT))
                         {
                             continue;
                         }
                     }
                     //Hiển thị những OD không tồn tại trong hệ thống
-                    else if(fillterType == FillterType.NotFound)
+                    else if (fillterType == FillterType.NotFound)
                     {
                         if (hTMaODs != null && hTMaODs.ContainsKey(keyHT))
                         {
@@ -619,9 +686,10 @@ namespace AddOn_AC_AL.Functions
                         hTODTs[keyHT] = new List<Models.DataTable.Row>() { row };
                         vBELNs.Add(keyHT);
                     }
-                    hTDTs.Add(i, row);
+                    hTDTs.Add(iRow, row);
                     dataTable.Rows.Row.Add(row);
                     program.oProgBar.Value = i + 1;
+                    iRow++;
                 }
                 program.oProgBar.Stop();
                 System.Runtime.InteropServices.Marshal.ReleaseComObject(program.oProgBar);
@@ -815,7 +883,7 @@ namespace AddOn_AC_AL.Functions
                         sQL = "SELECT UgpEntry, UgpCode FROM OUGP";
                         break;
                 }
-                var oRecordset = this.program.Recordset;
+                var oRecordset = (SAPbobsCOM.Recordset)this.program.Company.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
                 oRecordset.DoQuery(sQL);
                 var xml = oRecordset.GetAsXML();
                 var serializer = new XmlSerializer(typeof(Models.OUGP.BOM));
@@ -861,6 +929,7 @@ namespace AddOn_AC_AL.Functions
                         oDocuments.TaxDate = DateTime.ParseExact(first.BLDAT, "yyyyMMdd", null);
                         oDocuments.DocDueDate = DateTime.ParseExact(first.LFDAT, "yyyyMMdd", null);
                         oDocuments.DocDate = DateTime.ParseExact(first.WADAT_IST, "yyyyMMdd", null);
+                        oDocuments.UserFields.Fields.Item("U_SOD").Value = first.VBELN;
                         var oLines = oDocuments.Lines;
                         var lineNum = 0;
                         foreach (var row in gR)
@@ -894,7 +963,7 @@ namespace AddOn_AC_AL.Functions
                             var errCode = 0;
                             var errMes = "";
                             oCompany.GetLastError(out errCode, out errMes);
-                            throw new Exception($"Lỗi xảy ra khi tạo PO: {first.VBELN} -> {errCode}-{errMes}");
+                            throw new Exception($"Lỗi: {first.VBELN} -> {errCode}-{errMes}");
                         }
                         System.Runtime.InteropServices.Marshal.ReleaseComObject(oLines);
                         System.Runtime.InteropServices.Marshal.ReleaseComObject(oDocuments);
@@ -910,10 +979,10 @@ namespace AddOn_AC_AL.Functions
                     form.OpenForm();
                     form = null;
                 }
-                else
-                {
-                    SBO_Application.SetStatusBarMessage("Không có PO nào được tạo thành công!", BoMessageTime.bmt_Short, true);
-                }
+                //else
+                //{
+                //    SBO_Application.SetStatusBarMessage("Không có PO nào được tạo thành công!", BoMessageTime.bmt_Short, true);
+                //}
             }
             catch (Exception ex)
             {
