@@ -5,8 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Xml.Serialization;
 using System.Collections;
 using AddOn_AC_AL.Models;
@@ -17,7 +15,6 @@ namespace AddOn_AC_AL.Functions
     {
         private SAPbouiCOM.Application SBO_Application;
         private Program program;
-        //private RFCTable oD_Ts;
 
         private string formID = "";
         private string formType => this.program.formTypeKQTKPGH;
@@ -42,6 +39,9 @@ namespace AddOn_AC_AL.Functions
         private const string KEY_HT_CACHE_DT = "HTCACHEDT";
         private const string KEY_HT_CACHE_DT2 = "HTCACHED2";
         private const string KEY_HT_CACHE_DT3 = "HTCACHED3";
+
+        private const double VAT = 1.08;
+        private const string VAT_GROUP = "PVN4";
 
         private const string ERR_NOT_FOUND_CACE = "Lỗi khi dữ liệu cache, vui lòng thử thực hiện 'Tìm kiếm' lại!";
 
@@ -120,8 +120,6 @@ namespace AddOn_AC_AL.Functions
                 //oBtnExpand.Item.Enabled = false;
                 //oBtnComboLoc.Item.Enabled = false;
                 uDFormReady.Value = "Y";
-
-                
 
                 oForm.Visible = true;
             }
@@ -230,8 +228,9 @@ namespace AddOn_AC_AL.Functions
                         }
                         var filterValue = (FillterType)(int.Parse(uDLocDuLieu.Value));
                         var hT = MaODTonTaiTrongHeThong(oDTs);
-                        //hT.Add("6000644722", "");
-                        var t = MapDataRFCToDataTable(oDTs, filterValue, hT);
+                        var itemCodes = GetMaHangHoas(oDTs);
+                        var oITMs = GetDefaultWHS(itemCodes);
+                        var t = MapDataRFCToDataTable(oDTs, filterValue, hT, oITMs);
                         StoreDataCache(t.Item2, t.Item3, t.Item4, oDTs);
                         DisplayData(t.Item1);
                         break;
@@ -324,11 +323,11 @@ namespace AddOn_AC_AL.Functions
                         var tuNgay = DateTime.ParseExact(uDTuNgay.Value, "dd.MM.yy", null);
                         var denNgay = DateTime.ParseExact(uDDenNgay.Value, "dd.MM.yy", null);
                         var oDTs = Call_YAC_FM_FTI_GET_OD(soOD, tuNgay, denNgay);
+                        var itemCodes = GetMaHangHoas(oDTs);
+                        var oITMs = GetDefaultWHS(itemCodes);
                         var filterValue = (FillterType)(int.Parse(uDLocDuLieu.Value));
-                        //var hT = new Hashtable();
-                        //hT.Add("6000644722", "");
                         var hT = MaODTonTaiTrongHeThong(oDTs);
-                        var t = MapDataRFCToDataTable(oDTs, filterValue, hT);
+                        var t = MapDataRFCToDataTable(oDTs, filterValue, hT, oITMs);
                         StoreDataCache(t.Item2, t.Item3, t.Item4, oDTs);
                         DisplayData(t.Item1);
                         uDExistCache.Value = "Y";
@@ -542,16 +541,7 @@ namespace AddOn_AC_AL.Functions
         private Hashtable MaODTonTaiTrongHeThong(RFCTable oD_Ts)
         {
             var ret = new Hashtable();
-            var hTBBELN = new Hashtable();
-            for (var i = 0; i < oD_Ts.RowCount; i++)
-            {
-                var keyHT = (string)oD_Ts[i, "VBELN"];
-                if(!hTBBELN.ContainsKey(keyHT))
-                {
-                    hTBBELN.Add(keyHT, "");
-                }
-            }
-            var bBELNs = hTBBELN.Keys.OfType<string>().ToList();
+            var bBELNs = GetMaODs(oD_Ts);
             var sQLQueryFormat = "";
             switch (this.program.DBServerType)
             {
@@ -596,6 +586,58 @@ namespace AddOn_AC_AL.Functions
         }
 
         /// <summary>
+        /// Get giá trị DefaultWHS cho mã hàng hóa
+        /// </summary>
+        /// <param name="itemCodes"></param>
+        /// <returns></returns>
+        private List<OITM> GetDefaultWHS(List<string> itemCodes)
+        {
+            var rets = new List<OITM>();
+            var sQLQueryFormat = "";
+            switch (this.program.DBServerType)
+            {
+                case SAPbobsCOM.BoDataServerTypes.dst_HANADB:
+                    sQLQueryFormat = "SELECT \"ItemCode\", \"DfltWH\" FROM \"OITM\" WHERE \"ItemCode\" IN ({0})";
+                    break;
+                default:
+                    sQLQueryFormat = "SELECT ItemCode, DfltWH FROM OITM WHERE ItemCode IN ({0})";
+                    break;
+            }
+            var nRowInPage = 200;
+            var nPage = itemCodes.Count / nRowInPage;
+            if (itemCodes.Count % nRowInPage != 0)
+            {
+                nPage = nPage + 1;
+            }
+            var oRecordset = (SAPbobsCOM.Recordset)this.program.Company.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            for (var i = 0; i < nPage; i++)
+            {
+                var conditionIn = string.Join(", ",
+                    itemCodes
+                    .OrderBy(it => it)
+                    .Skip(i * nRowInPage)
+                    .Take(nRowInPage)
+                    .Select(it => string.Format("'{0}'", it))
+                    .ToList()
+                    );
+                var sQLQuery = string.Format(sQLQueryFormat, conditionIn);
+                oRecordset.DoQuery(sQLQuery);
+                while (!oRecordset.EoF)
+                {
+                    var itemCode = (string)oRecordset.Fields.Item(0).Value;
+                    var defaultWHS = (string)oRecordset.Fields.Item(1).Value;
+                    rets.Add(new OITM()
+                    {
+                        ItemCode = itemCode,
+                        DfltWH = defaultWHS,
+                    });
+                    oRecordset.MoveNext();
+                }
+            }
+            return rets;
+        }
+
+        /// <summary>
         /// Từ chuỗi XML cấu trúc DataTable của SAP tạo đối tượng DataTable trong .NET
         /// </summary>
         /// <returns></returns>
@@ -630,7 +672,7 @@ namespace AddOn_AC_AL.Functions
         /// + Item3 (Key: IndexOfDataTable SAP, Value: Models.DataTable.Row)
         /// + Item4 List<string> thứ tự VBELN RFC trả về
         /// </returns>
-        private Tuple<Models.DataTable.DataTable, Hashtable, Hashtable, List<string>> MapDataRFCToDataTable(RFCTable oD_Ts, FillterType fillterType = 0, Hashtable hTMaODs = null)
+        private Tuple<Models.DataTable.DataTable, Hashtable, Hashtable, List<string>> MapDataRFCToDataTable(RFCTable oD_Ts, FillterType fillterType = 0, Hashtable hTMaODs = null, List<OITM> oITMs = null)
         {
             program.oProgBar = SBO_Application.StatusBar.CreateProgressBar("Đang xử lý dữ liệu...", oD_Ts.RowCount, true);
             try
@@ -643,6 +685,7 @@ namespace AddOn_AC_AL.Functions
                 for (var i = 0; i < oD_Ts.RowCount; i++)
                 {
                     var keyHT = (string)oD_Ts[i, "VBELN"];
+                    var itemCode = (string)oD_Ts[i, "MATNR"];
                     //Hiển thị những OD đã tồn tại trong hệ thống
                     if (fillterType == FillterType.Exist)
                     {
@@ -672,10 +715,22 @@ namespace AddOn_AC_AL.Functions
                             Value = cellValue,
                         });
                     }
+                    //WareHouse
+                    var valueWHS = "";
+                    if(oITMs != null)
+                    {
+                        var oITM = oITMs
+                            .Where(it => it.ItemCode == itemCode)
+                            .FirstOrDefault();
+                        if(oITM != null)
+                        {
+                            valueWHS = oITM.DfltWH;
+                        } 
+                    }
                     row.Cells.Cell.Add(new Models.DataTable.Cell()
                     {
                         ColumnUid = "WHSE",
-                        Value = "",
+                        Value = valueWHS,
                     });
                     if (hTODTs.ContainsKey(keyHT))
                     {
@@ -705,9 +760,13 @@ namespace AddOn_AC_AL.Functions
             }
         }
 
+        /// <summary>
+        /// Get mã OD từ dữ liệu Service An Cường trả về
+        /// </summary>
+        /// <param name="oD_Ts"></param>
+        /// <returns></returns>
         private List<string> GetMaODs(RFCTable oD_Ts)
         {
-            var rets = new List<string>();
             var hT = new Hashtable();
             for (var i = 0; i < oD_Ts.RowCount; i++)
             {
@@ -715,8 +774,27 @@ namespace AddOn_AC_AL.Functions
                 if (hT.ContainsKey(maOD))
                     continue;
                 hT.Add(maOD, "");
-                rets.Add(maOD);
             }
+            var rets = hT.Keys.OfType<string>().ToList();
+            return rets;
+        }
+
+        /// <summary>
+        /// Get mã hàng hóa từ dữ liệu Service An Cường trả về
+        /// </summary>
+        /// <param name="oD_Ts"></param>
+        /// <returns></returns>
+        private List<string> GetMaHangHoas(RFCTable oD_Ts)
+        {
+            var hT = new Hashtable();
+            for (var i = 0; i < oD_Ts.RowCount; i++)
+            {
+                var maHangHoa = (string)oD_Ts[i, "MATNR"];
+                if (hT.ContainsKey(maHangHoa))
+                    continue;
+                hT.Add(maHangHoa, "");
+            }
+            var rets = hT.Keys.OfType<string>().ToList();
             return rets;
         }
 
@@ -926,8 +1004,8 @@ namespace AddOn_AC_AL.Functions
                         var oDocuments = (SAPbobsCOM.Documents)oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oDrafts);
                         oDocuments.DocObjectCode = SAPbobsCOM.BoObjectTypes.oPurchaseOrders;
                         oDocuments.CardCode = first.SUPPLIER;
-                        oDocuments.TaxDate = DateTime.ParseExact(first.BLDAT, "yyyyMMdd", null);
-                        oDocuments.DocDueDate = DateTime.ParseExact(first.LFDAT, "yyyyMMdd", null);
+                        oDocuments.TaxDate = DateTime.ParseExact(first.WADAT_IST, "yyyyMMdd", null);
+                        oDocuments.DocDueDate = DateTime.ParseExact(first.WADAT_IST, "yyyyMMdd", null);
                         oDocuments.DocDate = DateTime.ParseExact(first.WADAT_IST, "yyyyMMdd", null);
                         oDocuments.UserFields.Fields.Item("U_SOD").Value = first.VBELN;
                         var oLines = oDocuments.Lines;
@@ -942,9 +1020,11 @@ namespace AddOn_AC_AL.Functions
                                 oLines.UoMEntry = ((Models.OUGP.Row)hTOUGP[row.VRKME]).UgpEntry;
                             }
                             oLines.Quantity = double.Parse(row.LFIMG);
-                            oLines.UnitPrice = double.Parse(row.UNITPRICE);
-                            oLines.LineTotal = oLines.Quantity * oLines.UnitPrice;
+                            oLines.UnitPrice = double.Parse(row.UNITPRICE) * VAT;
+                            //oLines.LineTotal = oLines.Quantity * oLines.UnitPrice * VAT;
                             oLines.WarehouseCode = row.WHSE;
+                            oLines.VatGroup = VAT_GROUP;
+
                             lineNum++;
                         }
                         var ret = oDocuments.Add();
@@ -979,10 +1059,6 @@ namespace AddOn_AC_AL.Functions
                     form.OpenForm();
                     form = null;
                 }
-                //else
-                //{
-                //    SBO_Application.SetStatusBarMessage("Không có PO nào được tạo thành công!", BoMessageTime.bmt_Short, true);
-                //}
             }
             catch (Exception ex)
             {

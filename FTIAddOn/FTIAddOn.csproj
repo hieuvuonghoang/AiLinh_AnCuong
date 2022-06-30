@@ -116,6 +116,7 @@
   <ItemGroup>
     <Compile Include="Functions\DanhSachPOTaoThanhCong.cs" />
     <Compile Include="Functions\KetQuaTimKiemPhieuGiaoHang.cs" />
+    <Compile Include="Models\OITM.cs" />
     <Compile Include="Models\RecordsetOUGP.cs" />
     <Compile Include="Models\DataTable.cs" />
     <Compile Include="Models\IDValue.cs" />
@@ -157,12 +158,6 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="Forms\KetQuaTimKiemPhieuGiaoHang.srf">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Forms\TestFunction.srf">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Forms\TimKiemPhieuGiaoHang.srf">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="Images\CFL.bmp">
