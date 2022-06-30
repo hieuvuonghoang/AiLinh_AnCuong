@@ -8,6 +8,7 @@ using System.Linq;
 using System.Xml.Serialization;
 using System.Collections;
 using AddOn_AC_AL.Models;
+using System.Drawing;
 
 namespace AddOn_AC_AL.Functions
 {
@@ -112,7 +113,7 @@ namespace AddOn_AC_AL.Functions
                 //oGrid.DataTable = oDataTable0;
                 //oGrid.CollapseLevel = 1;
                 //oGrid.AutoResizeColumns();
-                oGrid.SelectionMode = BoMatrixSelect.ms_Auto;
+                oGrid.SelectionMode = BoMatrixSelect.ms_NotSupported;
 
                 //SetTitleGrid();
 
@@ -155,19 +156,14 @@ namespace AddOn_AC_AL.Functions
                 switch (pVal.ItemUID)
                 {
                     case GRID_ID:
-                        if (pVal.ColUID == "RowsHeader")
-                        {
-                            if (pVal.Modifiers == BoModifiersEnum.mt_SHIFT)
-                            {
-                                bubbleEvent = false;
-                                SBO_Application.SetStatusBarMessage("Modifier keys 'SHIFT' not use...", BoMessageTime.bmt_Short, true);
-                            }
-                            if (oGrid.Rows.IsLeaf(pVal.Row))
-                            {
-                                bubbleEvent = false;
-                                SBO_Application.SetStatusBarMessage("Row IsLeaf disable for select...", BoMessageTime.bmt_Short, true);
-                            }
-                        }
+                        //if (pVal.ColUID == "RowsHeader")
+                        //{
+                        //    if (oGrid.Rows.IsLeaf(pVal.Row))
+                        //    {
+                        //        bubbleEvent = false;
+                        //        SBO_Application.SetStatusBarMessage("Row IsLeaf disable for select...", BoMessageTime.bmt_Short, true);
+                        //    }
+                        //}
                         break;
                 }
             }
@@ -230,6 +226,8 @@ namespace AddOn_AC_AL.Functions
                         var hT = MaODTonTaiTrongHeThong(oDTs);
                         var itemCodes = GetMaHangHoas(oDTs);
                         var oITMs = GetDefaultWHS(itemCodes);
+                        //var hT = new Hashtable();
+                        //var oITMs = new List<OITM>();
                         var t = MapDataRFCToDataTable(oDTs, filterValue, hT, oITMs);
                         StoreDataCache(t.Item2, t.Item3, t.Item4, oDTs);
                         DisplayData(t.Item1);
@@ -299,10 +297,12 @@ namespace AddOn_AC_AL.Functions
             bubbleEvent = true;
             try
             {
+                Hashtable hTDT = null;
                 switch (pVal.ItemUID)
                 {
                     case BTN_TIM_KIEM_ID:
                         //Xóa dữ liệu
+                        #region "Tìm kiếm"
                         uDExistCache.Value = "N";
                         oDataTable0.Rows.Clear();
                         if (this.program.hTFormData.ContainsKey(formID))
@@ -327,10 +327,13 @@ namespace AddOn_AC_AL.Functions
                         var oITMs = GetDefaultWHS(itemCodes);
                         var filterValue = (FillterType)(int.Parse(uDLocDuLieu.Value));
                         var hT = MaODTonTaiTrongHeThong(oDTs);
+                        //var hT = new Hashtable();
+                        //var oITMs = new List<OITM>();
                         var t = MapDataRFCToDataTable(oDTs, filterValue, hT, oITMs);
                         StoreDataCache(t.Item2, t.Item3, t.Item4, oDTs);
                         DisplayData(t.Item1);
                         uDExistCache.Value = "Y";
+                        #endregion
                         break;
                     case BTN_COLLAPSE_ID:
                         oGrid.Rows.CollapseAll();
@@ -339,6 +342,7 @@ namespace AddOn_AC_AL.Functions
                         oGrid.Rows.ExpandAll();
                         break;
                     case BTN_SELECT_ALL_ID:
+                        #region "Select All"
                         oGrid.Rows.SelectedRows.Clear();
                         oDataTable1.Rows.Clear();
                         program.oProgBar = SBO_Application.StatusBar.CreateProgressBar("Đang thực hiện select all...", oGrid.Rows.Count, true);
@@ -354,9 +358,11 @@ namespace AddOn_AC_AL.Functions
                         program.oProgBar.Stop();
                         System.Runtime.InteropServices.Marshal.ReleaseComObject(program.oProgBar);
                         program.oProgBar = null;
+                        #endregion
                         break;
                     case BTN_TAO_PO_ID:
-                        Hashtable hTDT = null;
+                        #region "Tạo PO"
+                        //Hashtable hTDT = null;
                         if (uDExistCache.Value == "N")
                         {
                             throw new Exception("Lỗi khi lưu cache, vui lòng thử thực hiện 'Tìm kiếm' lại!");
@@ -464,22 +470,63 @@ namespace AddOn_AC_AL.Functions
                             }
                         }
                         TaoPO(rowDatas);
+                        #endregion
                         break;
                     case GRID_ID:
+                        #region "Grid Click"
                         switch (pVal.ColUID)
                         {
                             case "RowsHeader":
-                                if (pVal.Modifiers != BoModifiersEnum.mt_CTRL && !oDataTable1.IsEmpty)
+                                #region "RowsHeader"
+                                //Chỉ xử lý khi click vào Level 1
+                                if (!oGrid.Rows.IsLeaf(pVal.Row))
                                 {
-                                    oDataTable1.Rows.Clear();
+                                    //Lấy dữ liệu từ cache .NETs
+                                    if (uDExistCache.Value == "N")
+                                    {
+                                        throw new Exception("Lỗi khi lưu cache, vui lòng thực hiện 'Tìm kiếm' lại!");
+                                    }
+                                    if (!this.program.hTFormData.ContainsKey(formID))
+                                    {
+                                        throw new Exception(ERR_NOT_FOUND_CACE);
+                                    }
+                                    else
+                                    {
+                                        hTDT = (Hashtable)((Hashtable)this.program.hTFormData[formID])[KEY_HT_CACHE_DT];
+                                    }
+
+                                    //Đã chọn dòng hay chưa
+                                    var find = false;
+                                    var j = 0;
+                                    for (; j < oDataTable1.Rows.Count; j++)
+                                    {
+                                        var row = (int)oDataTable1.GetValue(0, j);
+                                        if (row == pVal.Row)
+                                        {
+                                            find = true;
+                                            break;
+                                        }
+                                    }
+                                    int forceColor = 0;
+                                    if (!find)
+                                    {
+                                        oDataTable1.Rows.Add(1);
+                                        oDataTable1.Rows.Offset = oDataTable1.Rows.Count - 1;
+                                        oDataTable1.SetValue(0, oDataTable1.Rows.Offset, pVal.Row);
+                                        forceColor = Color.Yellow.R | (Color.Yellow.G << 8) | (Color.Yellow.B << 16);
+                                    }
+                                    else
+                                    {
+                                        oDataTable1.Rows.Remove(j);
+                                        forceColor = -1;
+                                    }
+                                    oGrid.CommonSetting.SetRowBackColor(pVal.Row + 1, forceColor);
+                                    oForm.Freeze(false);
                                 }
-                                oDataTable1.Rows.Add(1);
-                                oDataTable1.Rows.Offset = oDataTable1.Rows.Count - 1;
-                                oDataTable1.SetValue(0, oDataTable1.Rows.Offset, pVal.Row);
-                                break;
-                            case "WHSE":
+                                #endregion
                                 break;
                         }
+                        #endregion
                         break;
                 }
             }
@@ -870,12 +917,14 @@ namespace AddOn_AC_AL.Functions
 
                 oGrid.DataTable = oDataTable0;
                 oGrid.CollapseLevel = 1;
-                oGrid.SelectionMode = BoMatrixSelect.ms_Auto;
+                //oGrid.SelectionMode = BoMatrixSelect.ms_Auto;
 
                 for (var i = 0; i < oGrid.Columns.Count; i++)
                 {
                     if (oGrid.Columns.Item(i).UniqueID == "WHSE")
+                    {
                         continue;
+                    }
                     oGrid.Columns.Item(i).Editable = false;
                 }
 
