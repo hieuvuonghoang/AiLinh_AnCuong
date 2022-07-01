@@ -31,5 +31,7 @@ namespace AddOn_AC_AL.Models
         public string VGPOS { get; set; }
         public string LGORT { get; set; }
         public string LGORT_AL { get; set; }
+        public string ZNOTE { get; set; }
+        public string DIACHIGH { get; set; }
     }
 }

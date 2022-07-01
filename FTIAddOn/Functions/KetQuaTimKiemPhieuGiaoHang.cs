@@ -323,9 +323,9 @@ namespace AddOn_AC_AL.Functions
                         var tuNgay = DateTime.ParseExact(uDTuNgay.Value, "dd.MM.yy", null);
                         var denNgay = DateTime.ParseExact(uDDenNgay.Value, "dd.MM.yy", null);
                         var oDTs = Call_YAC_FM_FTI_GET_OD(soOD, tuNgay, denNgay);
+                        var filterValue = (FillterType)(int.Parse(uDLocDuLieu.Value));
                         var itemCodes = GetMaHangHoas(oDTs);
                         var oITMs = GetDefaultWHS(itemCodes);
-                        var filterValue = (FillterType)(int.Parse(uDLocDuLieu.Value));
                         var hT = MaODTonTaiTrongHeThong(oDTs);
                         //var hT = new Hashtable();
                         //var oITMs = new List<OITM>();
@@ -343,16 +343,15 @@ namespace AddOn_AC_AL.Functions
                         break;
                     case BTN_SELECT_ALL_ID:
                         #region "Select All"
-                        oGrid.Rows.SelectedRows.Clear();
+                        //oGrid.Rows.SelectedRows.Clear();
                         oDataTable1.Rows.Clear();
                         program.oProgBar = SBO_Application.StatusBar.CreateProgressBar("Đang thực hiện select all...", oGrid.Rows.Count, true);
+                        var editCol = (GridColumn)oGrid.Columns.Item("RowsHeader");
                         for (var i = 0; i < oGrid.Rows.Count; i++)
                         {
                             if (oGrid.Rows.IsLeaf(i))
                                 continue;
-                            oGrid.Rows.SelectedRows.Add(i);
-                            oDataTable1.Rows.Add(1);
-                            oDataTable1.SetValue(0, oDataTable1.Rows.Count - 1, i);
+                            editCol.Click(i);
                             program.oProgBar.Value = i + 1;
                         }
                         program.oProgBar.Stop();
@@ -460,6 +459,12 @@ namespace AddOn_AC_AL.Functions
                                             break;
                                         case "LGORT_AL":
                                             rowData.LGORT_AL = cell.Value.ToString();
+                                            break;
+                                        case "ZNOTE":
+                                            rowData.ZNOTE = cell.Value.ToString();
+                                            break;
+                                        case "DIACHIGH":
+                                            rowData.DIACHIGH = cell.Value.ToString();
                                             break;
                                         default:
                                             break;
@@ -725,6 +730,17 @@ namespace AddOn_AC_AL.Functions
             try
             {
                 var dataTable = GenNetDataTableFormXML();
+
+                var columnUids = new Dictionary<string, int>();
+
+                foreach(var column in dataTable.Columns.Column)
+                {
+                    if(!columnUids.ContainsKey(column.Uid))
+                    {
+                        columnUids.Add(column.Uid, 0);
+                    }
+                }
+
                 var hTODTs = new Hashtable();
                 var hTDTs = new Hashtable();
                 var vBELNs = new List<string>();
@@ -756,11 +772,14 @@ namespace AddOn_AC_AL.Functions
                     {
                         var columnName = oD_Ts.Columns[j].Name;
                         var cellValue = oD_Ts[i, columnName];
-                        row.Cells.Cell.Add(new Models.DataTable.Cell()
+                        if(columnUids.ContainsKey(columnName))
                         {
-                            ColumnUid = columnName,
-                            Value = cellValue,
-                        });
+                            row.Cells.Cell.Add(new Models.DataTable.Cell()
+                            {
+                                ColumnUid = columnName,
+                                Value = cellValue,
+                            });
+                        }
                     }
                     //WareHouse
                     var valueWHS = "";
@@ -774,11 +793,13 @@ namespace AddOn_AC_AL.Functions
                             valueWHS = oITM.DfltWH;
                         } 
                     }
+
                     row.Cells.Cell.Add(new Models.DataTable.Cell()
                     {
                         ColumnUid = "WHSE",
                         Value = valueWHS,
                     });
+                    
                     if (hTODTs.ContainsKey(keyHT))
                     {
                         ((List<Models.DataTable.Row>)hTODTs[keyHT]).Add(row);
@@ -983,6 +1004,8 @@ namespace AddOn_AC_AL.Functions
                 oGrid.Columns.Item("LGORT").TitleObject.Caption = "Mã Kho xuất của An Cường";
                 oGrid.Columns.Item("LGORT_AL").TitleObject.Caption = "Kho ảo Ái Linh";
                 oGrid.Columns.Item("SERIALNO").TitleObject.Caption = "Số Serial number";
+                oGrid.Columns.Item("ZNOTE").TitleObject.Caption = "Ghi chú giao hàng";
+                oGrid.Columns.Item("DIACHIGH").TitleObject.Caption = "Địa chỉ giao hàng";
             }
             catch (Exception ex)
             {
@@ -1056,7 +1079,12 @@ namespace AddOn_AC_AL.Functions
                         oDocuments.TaxDate = DateTime.ParseExact(first.WADAT_IST, "yyyyMMdd", null);
                         oDocuments.DocDueDate = DateTime.ParseExact(first.WADAT_IST, "yyyyMMdd", null);
                         oDocuments.DocDate = DateTime.ParseExact(first.WADAT_IST, "yyyyMMdd", null);
+                        oDocuments.Comments = first.ZNOTE;
+
                         oDocuments.UserFields.Fields.Item("U_SOD").Value = first.VBELN;
+                        oDocuments.UserFields.Fields.Item("U_DG").Value = first.ZNOTE;
+                        oDocuments.UserFields.Fields.Item("U_DC").Value = first.DIACHIGH;
+
                         var oLines = oDocuments.Lines;
                         var lineNum = 0;
                         foreach (var row in gR)
@@ -1070,7 +1098,6 @@ namespace AddOn_AC_AL.Functions
                             }
                             oLines.Quantity = double.Parse(row.LFIMG);
                             oLines.UnitPrice = double.Parse(row.UNITPRICE) * VAT;
-                            //oLines.LineTotal = oLines.Quantity * oLines.UnitPrice * VAT;
                             oLines.WarehouseCode = row.WHSE;
                             oLines.VatGroup = VAT_GROUP;
 
@@ -1114,5 +1141,6 @@ namespace AddOn_AC_AL.Functions
                 SBO_Application.SetStatusBarMessage(ex.Message, BoMessageTime.bmt_Short, true);
             }
         }
+
     }
 }
