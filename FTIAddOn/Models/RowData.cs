@@ -20,7 +20,7 @@ namespace AddOn_AC_AL.Models
         public string ARKTX { get; set; }
         public string WHSE { get; set; }
         public string VRKME { get; set; }
-        public string LFIMG { get; set; }
+        public double LFIMG { get; set; }
         public string UNITPRICE { get; set; }
         public string KPEIN { get; set; }
         public string WAERK { get; set; }

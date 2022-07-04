@@ -30,12 +30,15 @@ namespace AddOn_AC_AL.Functions
         private const string BTN_TAO_PO_ID = "Item_5";
         private const string BTN_TIM_KIEM_ID = "Item_13";
         private const string BTN_CB_LOC_ID = "Item_15";
+        private const string CB_GR_LINE_ITEM_ID = "Item_18";
         private const string UD_SO_PGH_ID = "UD_0";
         private const string UD_TU_NGAY_ID = "UD_1";
         private const string UD_DEN_NGAY_ID = "UD_2";
         private const string UD_LOC_VALUE_ID = "UD_3";
         private const string UD_EXIST_CACHE_ID = "UD_4";
         private const string UD_FORM_READY_ID = "UD_5";
+        private const string UD_GHICHUGH_ID = "UD_6";
+        private const string UD_CB_GROUP_LINE_ITEM_ID = "UD_7";
 
         private const string KEY_HT_CACHE_DT = "HTCACHEDT";
         private const string KEY_HT_CACHE_DT2 = "HTCACHED2";
@@ -63,12 +66,15 @@ namespace AddOn_AC_AL.Functions
         private SAPbouiCOM.UserDataSource uDSoPGH => oForm.DataSources.UserDataSources.Item(UD_SO_PGH_ID);
         private SAPbouiCOM.UserDataSource uDTuNgay => oForm.DataSources.UserDataSources.Item(UD_TU_NGAY_ID);
         private SAPbouiCOM.UserDataSource uDDenNgay => oForm.DataSources.UserDataSources.Item(UD_DEN_NGAY_ID);
+        private SAPbouiCOM.UserDataSource uDGhiChuGH => oForm.DataSources.UserDataSources.Item(UD_GHICHUGH_ID);
+        private SAPbouiCOM.UserDataSource uDGRLineItem => oForm.DataSources.UserDataSources.Item(UD_CB_GROUP_LINE_ITEM_ID);
         private SAPbouiCOM.UserDataSource uDLocDuLieu => oForm.DataSources.UserDataSources.Item(UD_LOC_VALUE_ID);
         private SAPbouiCOM.UserDataSource uDExistCache => oForm.DataSources.UserDataSources.Item(UD_EXIST_CACHE_ID);
         private SAPbouiCOM.UserDataSource uDFormReady => oForm.DataSources.UserDataSources.Item(UD_FORM_READY_ID);
         private SAPbouiCOM.Button oBtnCollapse => oForm.Items.Item(BTN_COLLAPSE_ID).Specific;
         private SAPbouiCOM.Button oBtnExpand => oForm.Items.Item(BTN_EXPAND_ID).Specific;
         private SAPbouiCOM.ButtonCombo oBtnComboLoc => oForm.Items.Item(BTN_CB_LOC_ID).Specific;
+        private SAPbouiCOM.CheckBox oCheckBoxGRLineItem => oForm.Items.Item(CB_GR_LINE_ITEM_ID).Specific;
 
         private enum FillterType
         {
@@ -109,6 +115,11 @@ namespace AddOn_AC_AL.Functions
                 oBtnComboLoc.ValidValues.Add(((int)FillterType.NotFound).ToString(), "OD chưa có trong hệ thống");
                 oBtnComboLoc.ValidValues.Add(((int)FillterType.Exist).ToString(), "OD đã tồn tại trong hệ thống");
                 oBtnComboLoc.Select(1, BoSearchKey.psk_Index);
+
+                oCheckBoxGRLineItem.ValOff = "N";
+                oCheckBoxGRLineItem.ValOn = "Y";
+
+                oCheckBoxGRLineItem.Checked = true;
 
                 //oGrid.DataTable = oDataTable0;
                 //oGrid.CollapseLevel = 1;
@@ -428,7 +439,7 @@ namespace AddOn_AC_AL.Functions
                                             rowData.VRKME = cell.Value.ToString();
                                             break;
                                         case "LFIMG":
-                                            rowData.LFIMG = cell.Value.ToString();
+                                            rowData.LFIMG = double.Parse(cell.Value.ToString());
                                             break;
                                         case "UNITPRICE":
                                             rowData.UNITPRICE = cell.Value.ToString();
@@ -749,6 +760,7 @@ namespace AddOn_AC_AL.Functions
                 {
                     var keyHT = (string)oD_Ts[i, "VBELN"];
                     var itemCode = (string)oD_Ts[i, "MATNR"];
+                    var ghiChuGH = ((string)oD_Ts[i, "ZNOTE"]).ToUpper();
                     //Hiển thị những OD đã tồn tại trong hệ thống
                     if (fillterType == FillterType.Exist)
                     {
@@ -761,6 +773,15 @@ namespace AddOn_AC_AL.Functions
                     else if (fillterType == FillterType.NotFound)
                     {
                         if (hTMaODs != null && hTMaODs.ContainsKey(keyHT))
+                        {
+                            continue;
+                        }
+                    }
+                    //Lọc theo ghi chú giao hàng
+                    if(!string.IsNullOrEmpty(uDGhiChuGH.Value))
+                    {
+                        var ghiChuGHFilter = uDGhiChuGH.Value.ToUpper();
+                        if(!ghiChuGH.Contains(ghiChuGHFilter))
                         {
                             continue;
                         }
@@ -1085,20 +1106,49 @@ namespace AddOn_AC_AL.Functions
                         oDocuments.UserFields.Fields.Item("U_DG").Value = first.ZNOTE;
                         oDocuments.UserFields.Fields.Item("U_DC").Value = first.DIACHIGH;
 
+                        var rowDataTmps = new List<RowData>();
+
+                        if(uDGRLineItem.Value == "Y")
+                        {
+                            var dicItemCodes = new Dictionary<string, RowData>();
+
+                            foreach (var row in gR)
+                            {
+                                var dicKey = $"{row.MATNR}_{row.UNITPRICE}";
+                                if (dicItemCodes.ContainsKey(dicKey))
+                                {
+                                    var dicItemCode = dicItemCodes[dicKey];
+                                    dicItemCode.LFIMG += row.LFIMG;
+                                }
+                                else
+                                {
+                                    dicItemCodes.Add(dicKey, row);
+                                }
+                            }
+                            rowDataTmps = dicItemCodes.Values.ToList();
+                        }
+                        else
+                        {
+                            foreach(var rowData in gR)
+                            {
+                                rowDataTmps.Add(rowData);
+                            }
+                        }
+
                         var oLines = oDocuments.Lines;
                         var lineNum = 0;
-                        foreach (var row in gR)
+                        foreach (var rowData in rowDataTmps)
                         {
                             oLines.Add();
                             oLines.SetCurrentLine(lineNum);
-                            oLines.ItemCode = row.MATNR;
-                            if (hTOUGP.ContainsKey(row.VRKME))
+                            oLines.ItemCode = rowData.MATNR;
+                            if (hTOUGP.ContainsKey(rowData.VRKME))
                             {
-                                oLines.UoMEntry = ((Models.OUGP.Row)hTOUGP[row.VRKME]).UgpEntry;
+                                oLines.UoMEntry = ((Models.OUGP.Row)hTOUGP[rowData.VRKME]).UgpEntry;
                             }
-                            oLines.Quantity = double.Parse(row.LFIMG);
-                            oLines.UnitPrice = double.Parse(row.UNITPRICE) * VAT;
-                            oLines.WarehouseCode = row.WHSE;
+                            oLines.Quantity = rowData.LFIMG;
+                            oLines.UnitPrice = double.Parse(rowData.UNITPRICE) * VAT;
+                            oLines.WarehouseCode = rowData.WHSE;
                             oLines.VatGroup = VAT_GROUP;
 
                             lineNum++;
