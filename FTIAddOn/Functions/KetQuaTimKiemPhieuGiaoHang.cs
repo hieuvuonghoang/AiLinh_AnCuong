@@ -1103,8 +1103,19 @@ namespace AddOn_AC_AL.Functions
                         oDocuments.Comments = first.ZNOTE;
 
                         oDocuments.UserFields.Fields.Item("U_SOD").Value = first.VBELN;
-                        oDocuments.UserFields.Fields.Item("U_DG").Value = first.ZNOTE;
-                        oDocuments.UserFields.Fields.Item("U_DC").Value = first.DIACHIGH;
+                        var maxLength = 254;
+                        var zNote = first.ZNOTE;
+                        if(zNote.Length > maxLength)
+                        {
+                            zNote = zNote.Substring(0, maxLength);
+                        }
+                        var zDiaChiGH = first.DIACHIGH;
+                        if(zDiaChiGH.Length > maxLength)
+                        {
+                            zDiaChiGH = zDiaChiGH.Substring(0, maxLength);
+                        }
+                        oDocuments.UserFields.Fields.Item("U_DG").Value = zNote;
+                        oDocuments.UserFields.Fields.Item("U_DC").Value = zDiaChiGH;
 
                         var rowDataTmps = new List<RowData>();
 
