@@ -1101,7 +1101,6 @@ namespace AddOn_AC_AL.Functions
                         oDocuments.DocDueDate = DateTime.ParseExact(first.WADAT_IST, "yyyyMMdd", null);
                         oDocuments.DocDate = DateTime.ParseExact(first.WADAT_IST, "yyyyMMdd", null);
 
-
                         oDocuments.UserFields.Fields.Item("U_SOD").Value = first.VBELN;
                         var maxLength = 250;
                         var zNote = first.ZNOTE;
@@ -1162,7 +1161,8 @@ namespace AddOn_AC_AL.Functions
                             oLines.UnitPrice = double.Parse(rowData.UNITPRICE) * VAT;
                             oLines.WarehouseCode = rowData.WHSE;
                             oLines.VatGroup = VAT_GROUP;
-                            oLines.UserFields.Fields.Item("U_PK").Value = "Y";
+
+                            oLines.UserFields.Fields.Item("U_PK2").Value = "Y";
 
                             lineNum++;
                         }
@@ -1173,6 +1173,7 @@ namespace AddOn_AC_AL.Functions
                             oCompany.GetNewObjectCode(out docEntry);
                             docEntrys.Add(new IDValue()
                             {
+                                ID = int.Parse(docEntry),
                                 IDS = docEntry,
                                 Value = first.VBELN
                             });
@@ -1217,22 +1218,27 @@ namespace AddOn_AC_AL.Functions
                 {
                     if (oDocuments.GetByKey(t.ID))
                     {
+                        var flagUpdate = false;
                         var countLine = oDocuments.Lines.Count;
-                        for(var i = countLine; i >= 0; i--)
+                        for (var i = countLine; i > 0; i--)
                         {
-                            oDocuments.Lines.SetCurrentLine(i);
-                            if(oDocuments.Lines.UserFields.Fields.Item("U_PK").Value == "N")
+                            oDocuments.Lines.SetCurrentLine(i - 1);
+                            if (oDocuments.Lines.UserFields.Fields.Item("U_PK2").Value != "Y")
                             {
                                 oDocuments.Lines.Delete();
+                                flagUpdate = true;
                             }
                         }
-                        if(oDocuments.Update() != 0)
+                        if (flagUpdate)
                         {
-                            var errCode = 0;
-                            var errMes = "";
-                            oCompany.GetLastError(out errCode, out errMes);
-                            //SBO_Application.SetStatusBarMessage(ex.Message, BoMessageTime.bmt_Short, true);
-                            throw new Exception($"Lỗi Delete Line: {t.ID} -> {errCode}-{errMes}");
+                            if (oDocuments.Update() != 0)
+                            {
+                                var errCode = 0;
+                                var errMes = "";
+                                oCompany.GetLastError(out errCode, out errMes);
+                                //SBO_Application.SetStatusBarMessage(ex.Message, BoMessageTime.bmt_Short, true);
+                                throw new Exception($"Lỗi Delete Line: {t.ID} -> {errCode}-{errMes}");
+                            }
                         }
                     }
                 }
