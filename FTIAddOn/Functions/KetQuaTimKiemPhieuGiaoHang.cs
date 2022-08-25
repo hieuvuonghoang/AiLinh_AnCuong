@@ -617,14 +617,14 @@ namespace AddOn_AC_AL.Functions
             }
             var nRowInPage = 200;
             var nPage = bBELNs.Count / nRowInPage;
-            if(bBELNs.Count % nRowInPage != 0)
+            if (bBELNs.Count % nRowInPage != 0)
             {
                 nPage = nPage + 1;
             }
             var oRecordset = (SAPbobsCOM.Recordset)this.program.Company.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
             for (var i = 0; i < nPage; i++)
             {
-                var conditionIn = string.Join(", ", 
+                var conditionIn = string.Join(", ",
                     bBELNs
                     .OrderBy(it => it)
                     .Skip(i * nRowInPage)
@@ -634,11 +634,11 @@ namespace AddOn_AC_AL.Functions
                     );
                 var sQLQuery = string.Format(sQLQueryFormat, conditionIn);
                 oRecordset.DoQuery(sQLQuery);
-                while(!oRecordset.EoF)
+                while (!oRecordset.EoF)
                 {
                     var docNum = (int)oRecordset.Fields.Item(0).Value;
                     var sOD = (string)oRecordset.Fields.Item(1).Value;
-                    if(!ret.ContainsKey(sOD))
+                    if (!ret.ContainsKey(sOD))
                     {
                         ret.Add(sOD, docNum);
                     }
@@ -744,9 +744,9 @@ namespace AddOn_AC_AL.Functions
 
                 var columnUids = new Dictionary<string, int>();
 
-                foreach(var column in dataTable.Columns.Column)
+                foreach (var column in dataTable.Columns.Column)
                 {
-                    if(!columnUids.ContainsKey(column.Uid))
+                    if (!columnUids.ContainsKey(column.Uid))
                     {
                         columnUids.Add(column.Uid, 0);
                     }
@@ -778,10 +778,10 @@ namespace AddOn_AC_AL.Functions
                         }
                     }
                     //Lọc theo ghi chú giao hàng
-                    if(!string.IsNullOrEmpty(uDGhiChuGH.Value))
+                    if (!string.IsNullOrEmpty(uDGhiChuGH.Value))
                     {
                         var ghiChuGHFilter = uDGhiChuGH.Value.ToUpper();
-                        if(!ghiChuGH.Contains(ghiChuGHFilter))
+                        if (!ghiChuGH.Contains(ghiChuGHFilter))
                         {
                             continue;
                         }
@@ -793,7 +793,7 @@ namespace AddOn_AC_AL.Functions
                     {
                         var columnName = oD_Ts.Columns[j].Name;
                         var cellValue = oD_Ts[i, columnName];
-                        if(columnUids.ContainsKey(columnName))
+                        if (columnUids.ContainsKey(columnName))
                         {
                             row.Cells.Cell.Add(new Models.DataTable.Cell()
                             {
@@ -804,15 +804,15 @@ namespace AddOn_AC_AL.Functions
                     }
                     //WareHouse
                     var valueWHS = "";
-                    if(oITMs != null)
+                    if (oITMs != null)
                     {
                         var oITM = oITMs
                             .Where(it => it.ItemCode == itemCode)
                             .FirstOrDefault();
-                        if(oITM != null)
+                        if (oITM != null)
                         {
                             valueWHS = oITM.DfltWH;
-                        } 
+                        }
                     }
 
                     row.Cells.Cell.Add(new Models.DataTable.Cell()
@@ -820,7 +820,7 @@ namespace AddOn_AC_AL.Functions
                         ColumnUid = "WHSE",
                         Value = valueWHS,
                     });
-                    
+
                     if (hTODTs.ContainsKey(keyHT))
                     {
                         ((List<Models.DataTable.Row>)hTODTs[keyHT]).Add(row);
@@ -1100,17 +1100,17 @@ namespace AddOn_AC_AL.Functions
                         oDocuments.TaxDate = DateTime.ParseExact(first.WADAT_IST, "yyyyMMdd", null);
                         oDocuments.DocDueDate = DateTime.ParseExact(first.WADAT_IST, "yyyyMMdd", null);
                         oDocuments.DocDate = DateTime.ParseExact(first.WADAT_IST, "yyyyMMdd", null);
-                        
+
 
                         oDocuments.UserFields.Fields.Item("U_SOD").Value = first.VBELN;
                         var maxLength = 250;
                         var zNote = first.ZNOTE;
-                        if(zNote.Length > maxLength)
+                        if (zNote.Length > maxLength)
                         {
                             zNote = zNote.Substring(0, maxLength);
                         }
                         var zDiaChiGH = first.DIACHIGH;
-                        if(zDiaChiGH.Length > maxLength)
+                        if (zDiaChiGH.Length > maxLength)
                         {
                             zDiaChiGH = zDiaChiGH.Substring(0, maxLength);
                         }
@@ -1120,7 +1120,7 @@ namespace AddOn_AC_AL.Functions
 
                         var rowDataTmps = new List<RowData>();
 
-                        if(uDGRLineItem.Value == "Y")
+                        if (uDGRLineItem.Value == "Y")
                         {
                             var dicItemCodes = new Dictionary<string, RowData>();
 
@@ -1141,7 +1141,7 @@ namespace AddOn_AC_AL.Functions
                         }
                         else
                         {
-                            foreach(var rowData in gR)
+                            foreach (var rowData in gR)
                             {
                                 rowDataTmps.Add(rowData);
                             }
@@ -1162,6 +1162,7 @@ namespace AddOn_AC_AL.Functions
                             oLines.UnitPrice = double.Parse(rowData.UNITPRICE) * VAT;
                             oLines.WarehouseCode = rowData.WHSE;
                             oLines.VatGroup = VAT_GROUP;
+                            oLines.UserFields.Fields.Item("U_PK").Value = "Y";
 
                             lineNum++;
                         }
@@ -1193,9 +1194,47 @@ namespace AddOn_AC_AL.Functions
                 }
                 if (docEntrys.Count != 0)
                 {
+                    DeleteLine(docEntrys);
                     var form = new DanhSachPOTaoThanhCong(this.SBO_Application, this.program, docEntrys, Guid.NewGuid().ToString().Substring(0, 8));
                     form.OpenForm();
                     form = null;
+                }
+            }
+            catch (Exception ex)
+            {
+                SBO_Application.SetStatusBarMessage(ex.Message, BoMessageTime.bmt_Short, true);
+            }
+        }
+
+        private void DeleteLine(List<IDValue> docEntrys)
+        {
+            try
+            {
+                var oCompany = this.program.Company;
+                var oDocuments = (SAPbobsCOM.Documents)oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oDrafts);
+                oDocuments.DocObjectCode = SAPbobsCOM.BoObjectTypes.oPurchaseOrders;
+                foreach (var t in docEntrys)
+                {
+                    if (oDocuments.GetByKey(t.ID))
+                    {
+                        var countLine = oDocuments.Lines.Count;
+                        for(var i = countLine; i >= 0; i--)
+                        {
+                            oDocuments.Lines.SetCurrentLine(i);
+                            if(oDocuments.Lines.UserFields.Fields.Item("U_PK").Value == "N")
+                            {
+                                oDocuments.Lines.Delete();
+                            }
+                        }
+                        if(oDocuments.Update() != 0)
+                        {
+                            var errCode = 0;
+                            var errMes = "";
+                            oCompany.GetLastError(out errCode, out errMes);
+                            //SBO_Application.SetStatusBarMessage(ex.Message, BoMessageTime.bmt_Short, true);
+                            throw new Exception($"Lỗi Delete Line: {t.ID} -> {errCode}-{errMes}");
+                        }
+                    }
                 }
             }
             catch (Exception ex)
