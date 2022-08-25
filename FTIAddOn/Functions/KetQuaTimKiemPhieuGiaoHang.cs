@@ -1100,10 +1100,10 @@ namespace AddOn_AC_AL.Functions
                         oDocuments.TaxDate = DateTime.ParseExact(first.WADAT_IST, "yyyyMMdd", null);
                         oDocuments.DocDueDate = DateTime.ParseExact(first.WADAT_IST, "yyyyMMdd", null);
                         oDocuments.DocDate = DateTime.ParseExact(first.WADAT_IST, "yyyyMMdd", null);
-                        oDocuments.Comments = first.ZNOTE;
+                        
 
                         oDocuments.UserFields.Fields.Item("U_SOD").Value = first.VBELN;
-                        var maxLength = 254;
+                        var maxLength = 250;
                         var zNote = first.ZNOTE;
                         if(zNote.Length > maxLength)
                         {
@@ -1116,6 +1116,7 @@ namespace AddOn_AC_AL.Functions
                         }
                         oDocuments.UserFields.Fields.Item("U_DG").Value = zNote;
                         oDocuments.UserFields.Fields.Item("U_DC").Value = zDiaChiGH;
+                        oDocuments.Comments = zNote;
 
                         var rowDataTmps = new List<RowData>();
 
