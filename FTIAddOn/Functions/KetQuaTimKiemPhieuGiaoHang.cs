@@ -576,6 +576,7 @@ namespace AddOn_AC_AL.Functions
                 var oD_Ts = func.Tables["LISTOD_T"];
                 program.oProgBar.Value = 8;
                 func.Execute();
+                con.Close();
                 program.oProgBar.Value = 10;
                 program.oProgBar.Stop();
                 System.Runtime.InteropServices.Marshal.ReleaseComObject(program.oProgBar);
