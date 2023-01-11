@@ -10,5 +10,6 @@ namespace AddOn_AC_AL.Models
     {
         public string ItemCode { get; set; }
         public string DfltWH { get; set; }
+        public string VatGroupPu { get; set; }
     }
 }

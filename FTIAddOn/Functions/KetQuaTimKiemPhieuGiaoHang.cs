@@ -661,10 +661,10 @@ namespace AddOn_AC_AL.Functions
             switch (this.program.DBServerType)
             {
                 case SAPbobsCOM.BoDataServerTypes.dst_HANADB:
-                    sQLQueryFormat = "SELECT \"ItemCode\", \"DfltWH\" FROM \"OITM\" WHERE \"ItemCode\" IN ({0})";
+                    sQLQueryFormat = "SELECT \"ItemCode\", \"DfltWH\", \"VatGroupPu\" FROM \"OITM\" WHERE \"ItemCode\" IN ({0})";
                     break;
                 default:
-                    sQLQueryFormat = "SELECT ItemCode, DfltWH FROM OITM WHERE ItemCode IN ({0})";
+                    sQLQueryFormat = "SELECT ItemCode, DfltWH, VatGroupPu FROM OITM WHERE ItemCode IN ({0})";
                     break;
             }
             var nRowInPage = 200;
@@ -690,10 +690,12 @@ namespace AddOn_AC_AL.Functions
                 {
                     var itemCode = (string)oRecordset.Fields.Item(0).Value;
                     var defaultWHS = (string)oRecordset.Fields.Item(1).Value;
+                    var vatGroupPu = (string)oRecordset.Fields.Item(2).Value;
                     rets.Add(new OITM()
                     {
                         ItemCode = itemCode,
                         DfltWH = defaultWHS,
+                        VatGroupPu = vatGroupPu,
                     });
                     oRecordset.MoveNext();
                 }
@@ -1090,6 +1092,19 @@ namespace AddOn_AC_AL.Functions
                 var oCompany = this.program.Company;
                 var docEntrys = new List<IDValue>();
                 var hTOUGP = GetOUGPs();
+                //
+                RFCTable oDTs = null;
+                if (!this.program.hTFormData.ContainsKey(formID))
+                {
+                    throw new Exception(ERR_NOT_FOUND_CACE);
+                }
+                else
+                {
+                    oDTs = (RFCTable)((Hashtable)this.program.hTFormData[formID])[KEY_HT_CACHE_DT3];
+                }
+                var itemCodes = GetMaHangHoas(oDTs);
+                var oITMs = GetDefaultWHS(itemCodes);
+                //
                 foreach (var gR in rowDatas.GroupBy(it => it.VBELN))
                 {
                     try
@@ -1161,8 +1176,14 @@ namespace AddOn_AC_AL.Functions
                             oLines.Quantity = rowData.LFIMG;
                             oLines.UnitPrice = double.Parse(rowData.UNITPRICE) * VAT;
                             oLines.WarehouseCode = rowData.WHSE;
-                            oLines.VatGroup = VAT_GROUP;
-
+                            var find = oITMs.Where(it => it.ItemCode == rowData.MATNR).FirstOrDefault();
+                            if(find != null)
+                            {
+                                oLines.VatGroup = find.VatGroupPu;
+                            } else
+                            {
+                                oLines.VatGroup = VAT_GROUP;
+                            }
                             oLines.UserFields.Fields.Item("U_PK2").Value = "Y";
 
                             lineNum++;
