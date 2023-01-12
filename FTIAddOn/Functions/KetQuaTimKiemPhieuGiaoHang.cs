@@ -1092,19 +1092,6 @@ namespace AddOn_AC_AL.Functions
                 var oCompany = this.program.Company;
                 var docEntrys = new List<IDValue>();
                 var hTOUGP = GetOUGPs();
-                //
-                RFCTable oDTs = null;
-                if (!this.program.hTFormData.ContainsKey(formID))
-                {
-                    throw new Exception(ERR_NOT_FOUND_CACE);
-                }
-                else
-                {
-                    oDTs = (RFCTable)((Hashtable)this.program.hTFormData[formID])[KEY_HT_CACHE_DT3];
-                }
-                var itemCodes = GetMaHangHoas(oDTs);
-                var oITMs = GetDefaultWHS(itemCodes);
-                //
                 foreach (var gR in rowDatas.GroupBy(it => it.VBELN))
                 {
                     try
@@ -1176,14 +1163,7 @@ namespace AddOn_AC_AL.Functions
                             oLines.Quantity = rowData.LFIMG;
                             oLines.UnitPrice = double.Parse(rowData.UNITPRICE) * VAT;
                             oLines.WarehouseCode = rowData.WHSE;
-                            var find = oITMs.Where(it => it.ItemCode == rowData.MATNR).FirstOrDefault();
-                            if(find != null)
-                            {
-                                oLines.VatGroup = find.VatGroupPu;
-                            } else
-                            {
-                                oLines.VatGroup = VAT_GROUP;
-                            }
+                            oLines.VatGroup = VAT_GROUP;
                             oLines.UserFields.Fields.Item("U_PK2").Value = "Y";
 
                             lineNum++;
