@@ -44,7 +44,7 @@ namespace AddOn_AC_AL.Functions
         private const string KEY_HT_CACHE_DT2 = "HTCACHED2";
         private const string KEY_HT_CACHE_DT3 = "HTCACHED3";
 
-        private const double VAT = 1.08;
+        private const double VAT = 1.1;
         private const string VAT_GROUP = "PVN4";
 
         private const string ERR_NOT_FOUND_CACE = "Lỗi khi dữ liệu cache, vui lòng thử thực hiện 'Tìm kiếm' lại!";
